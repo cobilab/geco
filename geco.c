@@ -108,6 +108,9 @@ refNModels)
         cModelWeight[n] = Power(cModelWeight[n], P->gamma) * (double) 
         pModel[n]->freqs[sym] / pModel[n]->sum;
 
+        // IF DEEP MODEL WAS USED AND NOW SUCKS GIVE 0 OF WEIGHT
+        // cModelWeight[n] = 1;       
+
         cModelTotalWeight += cModelWeight[n];
 
         if(cModels[n]->ref == TARGET)

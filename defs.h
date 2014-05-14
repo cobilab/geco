@@ -10,15 +10,6 @@ typedef unsigned long long ULL;
 
 typedef struct
   {
-  uint32_t nThreads;
-  uint32_t id;
-  uint64_t bits;
-  uint64_t size;
-  }
-Data;
-
-typedef struct
-  {
   uint32_t ctx;
   uint32_t den;
   uint32_t ir;
@@ -44,27 +35,21 @@ typedef struct
 Parameters;
 
 uint32_t garbage;
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// SYSTEM VALUES:
 #define BUFFER_SIZE            65535      
 #define PROGRESS_MIN           1000000
 #define DEFAULT_HELP           0
 #define DEFAULT_VERBOSE        0
 #define DEFAULT_FORCE          0
-#define DEFAULT_RMODEL1        0
-#define DEFAULT_RMODEL2        1
-#define DEFAULT_TMODEL1        2
-#define DEFAULT_TMODEL2        3
 #define MAX_CTX                31
 #define MIN_CTX                1
 #define MAX_DEN                1000000
 #define MIN_DEN                1
-#define HASH_TABLE_BEGIN_CTX   15
 #define BGUARD                 32
 #define DEFAULT_MAX_COUNT      ((1 << (sizeof(ACCounter) * 8)) - 1)
 #define MX_PMODEL              65535
-#define DEFAULT_HASH_SIZE      39999999
 #define ALPHABET_SIZE          4
 #define CHECKSUMGF             1073741824
 #define WATERMARK              16042014

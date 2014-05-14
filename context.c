@@ -15,15 +15,11 @@ static HCCounters auxCounters;
 
 static void InitHashTable(CModel *cModel)
   { 
-  cModel->hTable.entries = (Entry **) Calloc(cModel->hTable.size, 
-  sizeof(Entry *));
-  cModel->hTable.counters = (HCCounters **) Calloc(cModel->hTable.size, 
+  cModel->hTable.entries = (Entry **) Calloc(HASH_SIZE, sizeof(Entry *));
+  cModel->hTable.counters = (HCCounters **) Calloc(HASH_SIZE,
   sizeof(HCCounters *));
-  cModel->hTable.entrySize = (unsigned short *) Calloc(cModel->hTable.size, 
+  cModel->hTable.entrySize = (unsigned short *) Calloc(HASH_SIZE, 
   sizeof(unsigned short));
-
-  cModel->hTable.nUsedEntries = 0;
-  cModel->hTable.nUsedKeys = 0;
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -34,7 +30,7 @@ void FreeCModel(CModel *cModel)
 
   if(cModel->mode == HASH_TABLE_MODE)
     {
-    for(k = 0 ; k < cModel->hTable.size ; ++k)
+    for(k = 0 ; k < HASH_SIZE ; ++k)
       {
       if(cModel->hTable.entrySize[k] != 0)
         Free(cModel->hTable.entries[k]);
@@ -61,16 +57,13 @@ static void InitArray(CModel *cModel)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void InsertKey(HashTable *hTable, unsigned hIndex, uint64_t key)
+static void InsertKey(HashTable *hTable, unsigned hIndex, uint64_t idx)
   {
   hTable->entries[hIndex] = (Entry *) Realloc(hTable->entries[hIndex],
   (hTable->entrySize[hIndex] + 1) * sizeof(Entry), sizeof(Entry));
-  
-  if(!hTable->entrySize[hIndex])
-    hTable->nUsedEntries++;
 
-  hTable->nUsedKeys++;
-  hTable->entries[hIndex][hTable->entrySize[hIndex]].key = key;
+  hTable->entries[hIndex][hTable->entrySize[hIndex]].key = (uint32_t) 
+  (idx >> HASH_SHIFT);
   hTable->entrySize[hIndex]++;
   }
 
@@ -97,11 +90,12 @@ nHCCounters, unsigned k, unsigned smallCounters)
 static HCCounter *GetHCCounters(HashTable *hTable, uint64_t key)
   {
   unsigned k = 0, n;
-  unsigned hIndex = key % hTable->size;
+  unsigned hIndex = key % HASH_SIZE;
 
   for(n = 0 ; n < hTable->entrySize[hIndex] ; n++)
     {
-    if(hTable->entries[hIndex][n].key == key)
+    if(((uint64_t) hTable->entries[hIndex][n].key << HASH_SHIFT) + hIndex == 
+    key)
       {
       switch(hTable->entries[hIndex][n].counters)
         {
@@ -129,8 +123,8 @@ static HCCounter *GetHCCounters(HashTable *hTable, uint64_t key)
 PModel *CreatePModel(unsigned nSymbols)
   {
   PModel *pModel;
-  pModel = (PModel *)Malloc(sizeof(PModel));
-  pModel->freqs = (unsigned *)Malloc(nSymbols * sizeof(unsigned));
+  pModel = (PModel *) Malloc(sizeof(PModel));
+  pModel->freqs = (unsigned *) Malloc(nSymbols * sizeof(unsigned));
 
   return pModel;
   }
@@ -159,11 +153,12 @@ void UpdateCModelCounterIr(CModel *cModel, unsigned symbol)
     unsigned char smallCounter;
     unsigned i, k = 0;
     unsigned nHCCounters;            // The number of HCCounters in this entry
-    unsigned hIndex = pModelIdx % cModel->hTable.size;       // The hash index
+    unsigned hIndex = pModelIdx % HASH_SIZE;                 // The hash index
 
     for(n = 0 ; n < cModel->hTable.entrySize[hIndex] ; n++)
       {
-      if(cModel->hTable.entries[hIndex][n].key == pModelIdx)
+      if(((uint64_t) cModel->hTable.entries[hIndex][n].key << HASH_SHIFT) + 
+      hIndex == pModelIdx)
         {
         // If "counters" is zero, then update the "large" counters.
         if(cModel->hTable.entries[hIndex][n].counters == 0)
@@ -245,11 +240,12 @@ void UpdateCModelCounter(CModel *cModel, unsigned symbol)
     unsigned char smallCounter;
     unsigned i, k = 0;
     unsigned nHCCounters;            // The number of HCCounters in this entry
-    unsigned hIndex = pModelIdx % cModel->hTable.size;       // The hash index
+    unsigned hIndex = pModelIdx % HASH_SIZE;                 // The hash index
 
     for(n = 0 ; n < cModel->hTable.entrySize[hIndex] ; n++)
       {
-      if(cModel->hTable.entries[hIndex][n].key == pModelIdx)
+      if(((uint64_t) cModel->hTable.entries[hIndex][n].key << HASH_SHIFT) + 
+      hIndex == pModelIdx)
         {
         // If "counters" is zero, then update the "large" counters.
         if(cModel->hTable.entries[hIndex][n].counters == 0)
@@ -328,18 +324,17 @@ CModel *CreateCModel(uint32_t ctx, uint32_t aDen, uint32_t ir, uint8_t ref)
 
   cModel = (CModel *) Calloc(1, sizeof(CModel));
 
-  if(ctx > 31)
+  if(ctx > MAX_HASH_CTX)
     {
-    fprintf(stderr, "Error: context size cannot be greater than 31\n");
+    fprintf(stderr, "Error: context size cannot be greater than %d\n", 
+    MAX_HASH_CTX);
     exit(1);
     }
   
   multipliers           = (uint64_t *) Calloc(ctx, sizeof(uint64_t));
   cModel->nPModels      = (uint64_t) pow(ALPHABET_SIZE, ctx);
   cModel->ctx           = ctx;
-  cModel->nSymbols      = ALPHABET_SIZE;
   cModel->alphaDen      = aDen;
-  cModel->hTable.size   = DEFAULT_HASH_SIZE;
   cModel->pModelIdx     = 0;
   cModel->pModelIdxIR   = cModel->nPModels - 1;
   cModel->ir            = ir  == 0 ? 0 : 1;
@@ -425,7 +420,7 @@ void ComputePModel(CModel *cModel, PModel *pModel)
 
 double PModelSymbolNats(PModel *pModel, unsigned symbol)
   {
-  return log((double)pModel->sum / pModel->freqs[symbol]);
+  return log((double) pModel->sum / pModel->freqs[symbol]);
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

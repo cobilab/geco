@@ -3,28 +3,29 @@
 
 #include "defs.h"
 
-#define ARRAY_MODE          0
-#define HASH_TABLE_MODE     1
+#define ARRAY_MODE            0
+#define HASH_TABLE_MODE       1
+#define HASH_TABLE_BEGIN_CTX  15
+#define HASH_SHIFT            25      // DO NOT CHANGE VALUE, unless ur shore!
+#define HASH_SIZE             (1<<HASH_SHIFT)                 // 2^25=33554432
+#define MAX_HASH_CTX          ((uint32_t) (HASH_SHIFT+sizeof(uint32_t)-1))
 
-typedef unsigned short ACCounter;       // Size of context counters for arrays
-typedef unsigned char  HCCounter;  // Size of context counters for hash tables
-typedef HCCounter HCCounters[4];
+typedef unsigned short  ACCounter;      // Size of context counters for arrays
+typedef unsigned char   HCCounter; // Size of context counters for hash tables
+typedef HCCounter       HCCounters[4];
 
 typedef struct
   {
-  uint64_t        key;                         // The key stored in this entry
+  uint32_t        key;                         // The key stored in this entry
   unsigned char   counters;           // "Small" counters: 2 bits for each one
   }
 Entry;
 
 typedef struct
   {
-  unsigned        size;                              // Size of the hash table
   unsigned short  *entrySize;                  // Number of keys in this entry
   Entry           **entries;              // The heads of the hash table lists
   HCCounters      **counters;                          // The context counters
-  unsigned        nUsedEntries;
-  unsigned        nUsedKeys;
   }
 HashTable;
 
@@ -36,22 +37,7 @@ Array;
 
 typedef struct
   {
-  unsigned        *freqs;
-  unsigned        sum;
-  }
-PModel;
-
-typedef struct
-  {
-  double          *freqs;
-  }
-FloatPModel;
-
-
-typedef struct
-  {
   unsigned        ctx;                    // Current depth of context template
-  unsigned        nSymbols;                        // Number of coding symbols
   ULL             nPModels;            // Maximum number of probability models
   unsigned        alphaDen;                            // Denominator of alpha
   unsigned        maxCount;        // Counters /= 2 if one counter >= maxCount
@@ -65,6 +51,19 @@ typedef struct
   Array           array;
   }
 CModel;
+
+typedef struct
+  {
+  unsigned        *freqs;
+  unsigned        sum;
+  }
+PModel;
+
+typedef struct
+  {
+  double          *freqs;
+  }
+FloatPModel;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
