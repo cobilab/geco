@@ -9,74 +9,76 @@
 #define HASH_SIZE             33554471
 #define MAX_HASH_CTX          28 
 
-typedef unsigned short  ACCounter;      // Size of context counters for arrays
-typedef unsigned char   HCCounter; // Size of context counters for hash tables
-typedef HCCounter       HCCounters[4];
+typedef U16  ACCounter;            // Size of context counters for arrays
+typedef U8   HCCounter;       // Size of context counters for hash tables
+typedef U32  KEYSMAX;                                  // Keys index bits
+typedef U16  ENTMAX;                // Entry size (nKeys for each hIndex)
+typedef HCCounter HCCounters[4];
 
 typedef struct
   {
-  uint32_t        key;                         // The key stored in this entry
-  unsigned char   counters;           // "Small" counters: 2 bits for each one
+  U32        key;                         // The key stored in this entry
+  HCCounter  counters;           // "Small" counters: 2 bits for each one
   }
 Entry;
 
 typedef struct
   {
-  unsigned short  *entrySize;                  // Number of keys in this entry
-  Entry           **entries;              // The heads of the hash table lists
-  HCCounters      **counters;                          // The context counters
+  ENTMAX     *size;                       // Number of keys in this entry
+  Entry      **entries;              // The heads of the hash table lists
+  HCCounters **counters;                          // The context counters
   }
 HashTable;
 
 typedef struct
   {
-  ACCounter       *counters;
+  ACCounter  *counters;
   }
 Array;
 
 typedef struct
   {
-  unsigned        ctx;                    // Current depth of context template
-  ULL             nPModels;            // Maximum number of probability models
-  unsigned        alphaDen;                            // Denominator of alpha
-  unsigned        maxCount;        // Counters /= 2 if one counter >= maxCount
-  uint64_t        multiplier;
-  uint64_t        pModelIdx;
-  uint64_t        pModelIdxIR;
-  unsigned        mode;
-  uint8_t         ir;
-  uint8_t         ref;
-  HashTable       hTable;
-  Array           array;
+  U32        ctx;                    // Current depth of context template
+  U64        nPModels;            // Maximum number of probability models
+  U32        alphaDen;                            // Denominator of alpha
+  U32        maxCount;        // Counters /= 2 if one counter >= maxCount
+  U64        multiplier;
+  U64        pModelIdx;
+  U64        pModelIdxIR;
+  U32        mode;
+  U8         ir;
+  U8         ref;
+  HashTable  hTable;
+  Array      array;
   }
 CModel;
 
 typedef struct
   {
-  unsigned        *freqs;
-  unsigned        sum;
+  U32        *freqs;
+  U32        sum;
   }
 PModel;
 
 typedef struct
   {
-  double          *freqs;
+  double     *freqs;
   }
 FloatPModel;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void           FreeCModel            (CModel *);
-inline void    GetPModelIdx          (uint8_t *, CModel *);
-inline uint8_t GetPModelIdxIR        (uint8_t *, CModel *);
-PModel         *CreatePModel         (unsigned);
-FloatPModel    *CreateFloatPModel    (unsigned);
-void           ResetCModelIdx        (CModel *);
-void           UpdateCModelCounter   (CModel *, unsigned);
-void           UpdateCModelCounterIr (CModel *, unsigned);
-CModel         *CreateCModel         (uint32_t, uint32_t, uint32_t, uint8_t);
-void           ComputePModel         (CModel *, PModel *);
-double         PModelSymbolNats      (PModel *, unsigned);
+void         FreeCModel            (CModel *);
+inline void  GetPModelIdx          (U8 *, CModel *);
+inline U8    GetPModelIdxIR        (U8 *, CModel *);
+PModel       *CreatePModel         (U32);
+FloatPModel  *CreateFloatPModel    (U32);
+void         ResetCModelIdx        (CModel *);
+void         UpdateCModelCounter   (CModel *, U32);
+void         UpdateCModelCounterIr (CModel *, U32);
+CModel       *CreateCModel         (U32, U32, U32, U8);
+void         ComputePModel         (CModel *, PModel *);
+double       PModelSymbolNats      (PModel *, U32);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

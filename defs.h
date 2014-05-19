@@ -6,35 +6,43 @@
 #include <inttypes.h>
 #include <unistd.h>
 
-typedef unsigned long long ULL;
+typedef uint64_t ULL;
+typedef uint64_t U64;
+typedef uint32_t U32;
+typedef uint16_t U16;
+typedef uint8_t  U8;
+typedef int64_t  I64;
+typedef int32_t  I32;
+typedef int16_t  I16;
+typedef int8_t   I8;
 
 typedef struct
   {
-  uint32_t ctx;
-  uint32_t den;
-  uint32_t ir;
-  uint8_t  type;
+  U32 ctx;
+  U32 den;
+  U32 ir;
+  U8  type;
   }
 ModelPar;
 
 typedef struct
   {
-  uint8_t  help;
-  uint8_t  verbose;
-  uint8_t  force;
+  U8  help;
+  U8  verbose;
+  U8  force;
   ModelPar *model;
   char     *ref;
   char     **tar;
-  uint8_t  nTar;
-  uint64_t checksum;
-  uint64_t size;
-  uint32_t watermark;
+  U8  nTar;
+  U64 checksum;
+  U64 size;
+  U32 watermark;
   double   gamma;
-  uint32_t nModels;
+  U32 nModels;
   }
 Parameters;
 
-uint32_t garbage;
+U32 garbage;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
