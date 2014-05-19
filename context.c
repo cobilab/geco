@@ -63,7 +63,7 @@ static void InsertKey(HashTable *hTable, unsigned hIndex, uint64_t idx)
   (hTable->entrySize[hIndex] + 1) * sizeof(Entry), sizeof(Entry));
 
   hTable->entries[hIndex][hTable->entrySize[hIndex]].key = (uint32_t) 
-  (idx >> HASH_SHIFT);
+  (idx/HASH_SIZE);
   hTable->entrySize[hIndex]++;
   }
 
@@ -94,8 +94,7 @@ static HCCounter *GetHCCounters(HashTable *hTable, uint64_t key)
 
   for(n = 0 ; n < hTable->entrySize[hIndex] ; n++)
     {
-    if(((uint64_t) hTable->entries[hIndex][n].key << HASH_SHIFT) + hIndex == 
-    key)
+    if(((uint64_t) hTable->entries[hIndex][n].key*HASH_SIZE) + hIndex == key)
       {
       switch(hTable->entries[hIndex][n].counters)
         {
@@ -157,7 +156,7 @@ void UpdateCModelCounterIr(CModel *cModel, unsigned symbol)
 
     for(n = 0 ; n < cModel->hTable.entrySize[hIndex] ; n++)
       {
-      if(((uint64_t) cModel->hTable.entries[hIndex][n].key << HASH_SHIFT) + 
+      if(((uint64_t) cModel->hTable.entries[hIndex][n].key * HASH_SIZE) + 
       hIndex == pModelIdx)
         {
         // If "counters" is zero, then update the "large" counters.
@@ -244,7 +243,7 @@ void UpdateCModelCounter(CModel *cModel, unsigned symbol)
 
     for(n = 0 ; n < cModel->hTable.entrySize[hIndex] ; n++)
       {
-      if(((uint64_t) cModel->hTable.entries[hIndex][n].key << HASH_SHIFT) + 
+      if(((uint64_t) cModel->hTable.entries[hIndex][n].key * HASH_SIZE) + 
       hIndex == pModelIdx)
         {
         // If "counters" is zero, then update the "large" counters.

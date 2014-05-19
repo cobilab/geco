@@ -6,9 +6,8 @@
 #define ARRAY_MODE            0
 #define HASH_TABLE_MODE       1
 #define HASH_TABLE_BEGIN_CTX  15
-#define HASH_SHIFT            25      // DO NOT CHANGE VALUE, unless ur shore!
-#define HASH_SIZE             (1<<HASH_SHIFT)                 // 2^25=33554432
-#define MAX_HASH_CTX          ((uint32_t) (HASH_SHIFT+sizeof(uint32_t)-1))
+#define HASH_SIZE             33554471
+#define MAX_HASH_CTX          28 
 
 typedef unsigned short  ACCounter;      // Size of context counters for arrays
 typedef unsigned char   HCCounter; // Size of context counters for hash tables
