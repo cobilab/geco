@@ -16,10 +16,12 @@ and every copy made of these files.
 #ifndef ARITH_AUX_H_INCLUDED
 #define ARITH_AUX_H_INCLUDED
 
+#include "defs.h"
+
 void GetInterval(int *low, int *high, int *count, int symbol);
 int GetSymbol(int *low, int *high, int *count, int target, int nSymbols);
-void WriteNBits(int bits, int nBits, FILE *oFp);
-int ReadNBits(int nBits, FILE *iFp);
+void WriteNBits(uint64_t bits, int nBits, FILE *oFp);
+uint64_t ReadNBits(int nBits, FILE *iFp);
 void ArithEncodeSymbol(int symbol, int *counters, int totalCount, FILE *oFp);
 int ArithDecodeSymbol(int nSymbols, int *counters, int totalCount, FILE *iFp);
 

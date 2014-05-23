@@ -56,13 +56,12 @@ int GetSymbol(int *low, int *high, int *count, int target, int nSymbols)
 
 /*----------------------------------------------------------------------------*/
 
-void WriteNBits(int bits, int nBits, FILE *oFp)
+void WriteNBits(uint64_t bits, int nBits, FILE *oFp)
 
 	{
-	assert(nBits >= 0 && nBits <= sizeof(int) * 8);
 	while(nBits--)
 		{
-		if(((unsigned)bits >> nBits) & 0x1)
+		if((bits >> nBits) & 0x1)
 			arithmetic_encode(1, 2, 2, oFp);
 
 		else
@@ -74,12 +73,12 @@ void WriteNBits(int bits, int nBits, FILE *oFp)
 
 /*----------------------------------------------------------------------------*/
 
-int ReadNBits(int nBits, FILE *iFp)
+uint64_t ReadNBits(int nBits, FILE *iFp)
 
 	{
-	int bits = 0, target, low, high, count[2] = {1, 1};
+	uint64_t bits = 0;
+        int target, low, high, count[2] = {1, 1};
 
-	assert(nBits >= 0 && nBits <= sizeof(int) * 8);
 	while(nBits--)
 		{
 		bits <<= 1;

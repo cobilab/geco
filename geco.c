@@ -60,8 +60,8 @@ refNModels)
   start_encode();
 
   WriteNBits(WATERMARK,                32, Writter);
-  WriteNBits(P->checksum,              32, Writter);
-  WriteNBits(nSymbols,                 32, Writter);
+  WriteNBits(P->checksum,              46, Writter);
+  WriteNBits(nSymbols,                 46, Writter);
   WriteNBits((int) (P->gamma * 65536), 32, Writter);
   WriteNBits(P->nModels,               16, Writter);
   for(n = 0 ; n < P->nModels ; ++n)

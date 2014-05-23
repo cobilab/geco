@@ -40,8 +40,8 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id)
   start_decode(Reader);
 
   P[id].watermark        = ReadNBits(32, Reader);
-  garbage                = ReadNBits(32, Reader);
-  P[id].size             = ReadNBits(32, Reader);
+  garbage                = ReadNBits(46, Reader);
+  P[id].size             = ReadNBits(46, Reader);
   P[id].gamma            = ReadNBits(32, Reader) / 65536.0;
   P[id].nModels          = ReadNBits(16, Reader);
   for(k = 0 ; k < P[id].nModels ; ++k)
@@ -298,8 +298,8 @@ int32_t main(int argc, char *argv[])
       fprintf(stderr, "Error: Invalid compressed file to decompress!\n");
       return 1;
       }
-    checksum[n]    = ReadNBits(32, Reader);
-    P[n].size      = ReadNBits(32, Reader);
+    checksum[n]    = ReadNBits(46, Reader);
+    P[n].size      = ReadNBits(46, Reader);
     P[n].gamma     = ReadNBits(32, Reader) / 65536.0;
     P[n].nModels   = ReadNBits(16, Reader);
     P[n].model     = (ModelPar *) Calloc(P[n].nModels, sizeof(ModelPar));
