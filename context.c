@@ -88,7 +88,7 @@ U32 k, U32 smallCounters)
 static HCCounter *GetHCCounters(HashTable *hTable, U64 key)
   {
   U32 k = 0, n, hIndex = key % HASH_SIZE;
-  U64 b = key & 0xffffff00000000;
+  U64 b = key & 0xffffffff00000000;
 
   for(n = 0 ; n < hTable->size[hIndex] ; n++)
     {
@@ -147,7 +147,7 @@ void UpdateCModelCounterIr(CModel *M, U32 symbol)
     {
     U8 smallCounter;
     U32 i, k = 0, nHCCounters, hIndex = idx % HASH_SIZE;
-    U64 b = idx & 0xffffff00000000;
+    U64 b = idx & 0xffffffff00000000;
     for(n = 0 ; n < M->hTable.size[hIndex] ; n++)
       {
       if((M->hTable.entries[hIndex][n].key|b) == idx)
@@ -199,7 +199,8 @@ void UpdateCModelCounterIr(CModel *M, U32 symbol)
 
     // If key not found
     InsertKey(&M->hTable, hIndex, idx);
-    M->hTable.entries[hIndex][M->hTable.size[hIndex]-1].counters = (0x01<<(symbol<<1));
+    M->hTable.entries[hIndex][M->hTable.size[hIndex]-1].counters = 
+    (0x01<<(symbol<<1));
     }
   else
     {
@@ -229,7 +230,7 @@ void UpdateCModelCounter(CModel *cModel, U32 symbol)
     unsigned i, k = 0;
     unsigned nHCCounters;            // The number of HCCounters in this entry
     U32 hIndex = pModelIdx % HASH_SIZE;                 // The hash index
-    U64 b = pModelIdx & 0xffffff00000000;
+    U64 b = pModelIdx & 0xffffffff00000000;
 
     for(n = 0 ; n < cModel->hTable.size[hIndex] ; n++)
       {
