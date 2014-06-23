@@ -62,7 +62,7 @@ static void InsertKey(HashTable *hTable, U32 hIndex, U64 idx)
   {
   hTable->entries[hIndex] = (Entry *) Realloc(hTable->entries[hIndex],
   (hTable->size[hIndex] + 1) * sizeof(Entry), sizeof(Entry));
-  hTable->entries[hIndex][hTable->size[hIndex]++].key = (U32)(idx/HASH_SIZE);
+  hTable->entries[hIndex][hTable->size[hIndex]++].key = (U32)(idx&0xffffffff);
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -88,10 +88,11 @@ U32 k, U32 smallCounters)
 static HCCounter *GetHCCounters(HashTable *hTable, U64 key)
   {
   U32 k = 0, n, hIndex = key % HASH_SIZE;
+  U64 b = key & 0xffffff00000000;
 
   for(n = 0 ; n < hTable->size[hIndex] ; n++)
     {
-    if(((U64) hTable->entries[hIndex][n].key*HASH_SIZE) + hIndex == key)
+    if(((U64) hTable->entries[hIndex][n].key|b) == key)
       {
       switch(hTable->entries[hIndex][n].counters)
         {
@@ -146,9 +147,10 @@ void UpdateCModelCounterIr(CModel *M, U32 symbol)
     {
     U8 smallCounter;
     U32 i, k = 0, nHCCounters, hIndex = idx % HASH_SIZE;
+    U64 b = idx & 0xffffff00000000;
     for(n = 0 ; n < M->hTable.size[hIndex] ; n++)
       {
-      if(((U64) M->hTable.entries[hIndex][n].key*HASH_SIZE)+hIndex == idx)
+      if((M->hTable.entries[hIndex][n].key|b) == idx)
         {
         if(M->hTable.entries[hIndex][n].counters == 0)  // Large counters
           {
@@ -226,12 +228,14 @@ void UpdateCModelCounter(CModel *cModel, U32 symbol)
     unsigned char smallCounter;
     unsigned i, k = 0;
     unsigned nHCCounters;            // The number of HCCounters in this entry
-    unsigned hIndex = pModelIdx % HASH_SIZE;                 // The hash index
+    U32 hIndex = pModelIdx % HASH_SIZE;                 // The hash index
+    U64 b = pModelIdx & 0xffffff00000000;
 
     for(n = 0 ; n < cModel->hTable.size[hIndex] ; n++)
       {
-      if(((uint64_t) cModel->hTable.entries[hIndex][n].key * HASH_SIZE) + 
-      hIndex == pModelIdx)
+      //if(((uint64_t) cModel->hTable.entries[hIndex][n].key * HASH_SIZE) + 
+      //hIndex == pModelIdx)
+      if((cModel->hTable.entries[hIndex][n].key|b) == pModelIdx)
         {
         // If "counters" is zero, then update the "large" counters.
         if(cModel->hTable.entries[hIndex][n].counters == 0)
