@@ -148,6 +148,7 @@ void UpdateCModelCounterIr(CModel *M, U32 symbol)
     U8 smallCounter;
     U32 i, k = 0, nHCCounters, hIndex = idx % HASH_SIZE;
     U64 b = idx & 0xffffffff00000000;
+
     for(n = 0 ; n < M->hTable.size[hIndex] ; n++)
       {
       if((M->hTable.entries[hIndex][n].key|b) == idx)
@@ -196,6 +197,10 @@ void UpdateCModelCounterIr(CModel *M, U32 symbol)
       if(!M->hTable.entries[hIndex][n].counters)
         k++;
       }
+
+    // LIMITING ENTRYSIZE
+    if(M->hTable.size[hIndex] == 255)
+      return;
 
     // If key not found
     InsertKey(&M->hTable, hIndex, idx);
@@ -285,6 +290,10 @@ void UpdateCModelCounter(CModel *cModel, U32 symbol)
       if(!cModel->hTable.entries[hIndex][n].counters)
         k++;
       }
+
+    // LIMITING ENTRYSIZE
+    if(cModel->hTable.size[hIndex] == 255)
+      return;
 
     // If key not found
     InsertKey(&cModel->hTable, hIndex, pModelIdx);
