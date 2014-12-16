@@ -45,16 +45,13 @@ Usage: GeCo &#60OPTIONS&#62 ... -r &#60FILE&#62  [FILE]:&#60...&#62
 
   -v                     verbose mode             
   -f                     force (be sure!)             
-
   -rm &#60ctx&#62:&#60den&#62:&#60ir&#62   reference context model       
   -rm &#60ctx&#62:&#60den&#62:&#60ir&#62   reference context model
   ...
   -tm &#60ctx&#62:&#60den&#62:&#60ir&#62   target context model  
   -tm &#60ctx&#62:&#60den&#62:&#60ir&#62   target context model
   ...
-
   -g  &#60gamma&#62            gamma factor
-
   -r  &#60rFile&#62            reference file
 
 [tFile1]:&#60tFile2&#62:&#60...&#62  target file(s)</p>

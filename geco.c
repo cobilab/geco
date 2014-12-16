@@ -265,17 +265,13 @@ int32_t main(int argc, char *argv[])
     fprintf(stderr, "                                                    \n");
     fprintf(stderr, "  -v                       verbose mode             \n");
     fprintf(stderr, "  -f                       force (be sure!)         \n");
-    fprintf(stderr, "                                                    \n");
     fprintf(stderr, "  -rm <ctx>:<den>:<ir>     reference context model  \n");
     fprintf(stderr, "  -rm <ctx>:<den>:<ir>     reference context model  \n");
     fprintf(stderr, "  ...                                               \n");
-    fprintf(stderr, "                                                    \n");
     fprintf(stderr, "  -tm <ctx>:<den>:<ir>     target context model     \n");
     fprintf(stderr, "  -tm <ctx>:<den>:<ir>     target context model     \n");
     fprintf(stderr, "  ...                                               \n");
-    fprintf(stderr, "                                                    \n");
     fprintf(stderr, "  -g  <gamma>              gamma factor             \n");
-    fprintf(stderr, "                                                    \n");
     fprintf(stderr, "  -r  <rFile>              reference file           \n");
     fprintf(stderr, "                                                    \n");
     fprintf(stderr, "  <tFile1>:<tFile2>:<...>  target file(s)         \n\n");
