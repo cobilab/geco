@@ -109,6 +109,10 @@ refNModels)
         pModel[n]->freqs[sym] / pModel[n]->sum;
 
         cModelTotalWeight += cModelWeight[n];
+        
+        //UPDATE REMOVE COUNTER
+//        if(cModels[n]->ref == REFERENCE)
+//        UpdateCModelCounterRM(cModels[n], sym);
 
         if(cModels[n]->ref == TARGET)
           {

@@ -76,6 +76,7 @@ FloatPModel  *CreateFloatPModel    (U32);
 void         ResetCModelIdx        (CModel *);
 void         UpdateCModelCounter   (CModel *, U32);
 void         UpdateCModelCounterIr (CModel *, U32);
+void         UpdateCModelCounterRM (CModel *, U32);
 CModel       *CreateCModel         (U32, U32, U32, U8);
 void         ComputePModel         (CModel *, PModel *);
 double       PModelSymbolNats      (PModel *, U32);

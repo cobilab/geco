@@ -314,6 +314,23 @@ void UpdateCModelCounter(CModel *cModel, U32 symbol)
     }
   }
 
+//////////////////////////////////////////////////////////////////////////////
+
+void UpdateCModelCounterRM(CModel *cModel, U32 symbol)
+  {
+  ACCounter *aCounters;
+  uint64_t  pModelIdx = cModel->pModelIdx;
+
+  aCounters = &cModel->array.counters[pModelIdx << 2];
+  aCounters[symbol]--;
+  if(aCounters[symbol] == 0)
+    {
+    aCounters[0] <<= 1;
+    aCounters[1] <<= 1;
+    aCounters[2] <<= 1;
+    aCounters[3] <<= 1;
+    }
+  }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 CModel *CreateCModel(U32 ctx, U32 aDen, U32 ir, U8 ref) 
