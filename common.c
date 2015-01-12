@@ -122,7 +122,7 @@ uint8_t DNASymToNum(uint8_t symbol)
     case 'T': return 3;
     case 'C': return 1;
     case 'G': return 2;
-    default : return 5;
+    default : return 4;
     }
   }
 
