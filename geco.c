@@ -101,6 +101,9 @@ refNModels)
         }
 
       ArithEncodeSymbol(sym, (int *)(MX->freqs), (int) MX->sum, Writter);
+      
+      if(P->estim == 1)
+        fprintf(stdout, "%.3g\n", PModelSymbolNats(MX, sym));
 
       cModelTotalWeight = 0;
       for(n = 0 ; n < P->nModels ; ++n)
@@ -272,6 +275,7 @@ int32_t main(int argc, char *argv[])
     fprintf(stderr, "  -tm <ctx>:<den>:<ir>     target context model     \n");
     fprintf(stderr, "  ...                                               \n");
     fprintf(stderr, "  -g  <gamma>              gamma factor             \n");
+    fprintf(stderr, "  -e                       estimate only            \n");
     fprintf(stderr, "  -r  <rFile>              reference file           \n");
     fprintf(stderr, "                                                    \n");
     fprintf(stderr, "  <tFile1>:<tFile2>:<...>  target file(s)         \n\n");
@@ -280,6 +284,7 @@ int32_t main(int argc, char *argv[])
 
   P->verbose  = ArgsState  (DEFAULT_VERBOSE, p, argc, "-v" );
   P->force    = ArgsState  (DEFAULT_FORCE,   p, argc, "-f" );
+  P->estim    = ArgsState  (0,               p, argc, "-e" );
 
   P->nModels  = 0;
   for(n = 1 ; n < argc ; ++n)

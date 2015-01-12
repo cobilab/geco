@@ -30,6 +30,7 @@ typedef struct
   U8  help;
   U8  verbose;
   U8  force;
+  U8  estim;
   ModelPar *model;
   char     *ref;
   char     **tar;
