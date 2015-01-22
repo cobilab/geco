@@ -348,10 +348,10 @@ int32_t main(int argc, char *argv[])
 
   if(P->nTar > 1)
     for(n = 0 ; n < P->nTar ; ++n)
-      fprintf(stderr, "File %d compressed bytes: %"PRIu64" (%.6g)\n", n+1, 
+      fprintf(stderr, "File %d compressed bytes: %"PRIu64" , Distance: %.6g\n", n+1, 
       (uint64_t) I[n].bytes, (8.0*I[n].bytes) / (2*I[n].size));
 
-  fprintf(stderr, "Total bytes: %"PRIu64" (%.6g)\n", totalBytes, 
+  fprintf(stderr, "Total bytes: %"PRIu64" , Distance: %.6g\n", totalBytes, 
   (8.0*totalBytes)/(2*totalSize));  
 
   return EXIT_SUCCESS;
