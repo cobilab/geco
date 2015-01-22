@@ -4,6 +4,12 @@
 #include "context.h"
 #include "defs.h"
 
+typedef struct{
+  uint64_t size;
+  uint64_t bytes;
+  }
+INF;
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 static const uint32_t    DEFAULT_CONTEXT[]  = { 2, 20, 2, 14 };

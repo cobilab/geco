@@ -16,8 +16,8 @@
 //////////////////////////////////////////////////////////////////////////////
 // - - - - - - - - - - - - - - - C O M P R E S S O R - - - - - - - - - - - - -
 
-uint64_t Compress(Parameters *P, CModel **cModels, uint8_t id, uint32_t 
-refNModels)
+void Compress(Parameters *P, CModel **cModels, uint8_t id, uint32_t 
+refNModels, INF *I)
   {
   FILE        *Reader  = Fopen(P->tar[id], "r");
   char        *name    = concatenate(P->tar[id], ".co");
@@ -170,7 +170,8 @@ refNModels)
   if(P->verbose == 1)
     fprintf(stderr, "Done!                          \n");  // SPACES ARE VALID 
 
-  return _bytes_output;
+  I[id].bytes = _bytes_output;
+  I[id].size  = nSymbols;
   }
 
 
@@ -256,8 +257,9 @@ int32_t main(int argc, char *argv[])
   char        **p = *&argv;
   CModel      **refModels;
   uint32_t    n, k, refNModels;
-  uint64_t    totalBytes;
+  uint64_t    totalBytes, totalSize;
   Parameters  *P;
+  INF         *I;
 
   P = (Parameters *) Malloc(1 * sizeof(Parameters));
   
@@ -333,21 +335,24 @@ int32_t main(int argc, char *argv[])
       fprintf(stderr, "Checksum: %"PRIu64"\n", P->checksum);
     }
 
-  uint64_t bytes[P->nTar];
+  I = (INF *) Calloc(P->nTar, sizeof(INF));
 
+  totalSize  = 0;
   totalBytes = 0;
   for(n = 0 ; n < P->nTar ; ++n)
     {
-    bytes[n]    = Compress(P, refModels, n, refNModels);
-    totalBytes += bytes[n];
+    Compress(P, refModels, n, refNModels, I);
+    totalSize  += I[n].size;
+    totalBytes += I[n].bytes;
     }
 
   if(P->nTar > 1)
     for(n = 0 ; n < P->nTar ; ++n)
-      fprintf(stderr, "File %d compressed bytes: %"PRIu64"\n", n+1, (uint64_t) 
-      bytes[n]);
+      fprintf(stderr, "File %d compressed bytes: %"PRIu64" (%.6g)\n", n+1, 
+      (uint64_t) I[n].bytes, (8.0*I[n].bytes) / (2*I[n].size));
 
-  fprintf(stderr, "Total bytes: %"PRIu64"\n", (uint64_t) totalBytes);  
+  fprintf(stderr, "Total bytes: %"PRIu64" (%.6g)\n", totalBytes, 
+  (8.0*totalBytes)/(2*totalSize));  
 
   return EXIT_SUCCESS;
   }
