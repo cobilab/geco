@@ -52,8 +52,8 @@ void PrintStreamInfo(Alpha *A){
     fprintf(stderr, ",N");
   fprintf(stderr, "\n");
   fprintf(stderr, "Extra:\n");
-  fprintf(stderr, "  [-] Cardinality .................. %u\n", A->nSym);
-  fprintf(stderr, "  [-] Alphabet ..................... ");
+  fprintf(stderr, "  [+] Cardinality .................. %u\n", A->nSym);
+  fprintf(stderr, "  [+] Alphabet ..................... ");
   for(k = 0 ; k < A->nSym ; ++k)
     A->symbolic[k] == '\n' ? fprintf(stderr, "\\n") :
     fprintf(stderr, "%c", A->symbolic[k]);

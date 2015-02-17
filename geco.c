@@ -146,14 +146,14 @@ refNModels, INF *I){
       #ifdef ESTIMATE
       if(P->estim == 1){
         sym = readerBuffer[idxPos];
-        if(type == 1){  // IF IS A FASTA FILE
+        if(type == 1){  // IS A FAST[A] FILE
           if(sym == '>'){ header = 1; continue; }
           if(sym == '\n' && header == 1){ header = 0; continue; }
           if(sym == '\n') continue;
           if(sym == 'N' ) continue;
           if(header == 1) continue;
           }
-        else if(type == 2){ // IF IS A FASTQ FILE
+        else if(type == 2){ // IS A FAST[Q] FILE
           switch(line){
             case 0: if(sym == '\n'){ line = 1; dna = 1; } break;
             case 1: if(sym == '\n'){ line = 2; dna = 0; } break;
@@ -163,6 +163,10 @@ refNModels, INF *I){
           if(dna == 0 || sym == '\n') continue;
           if(dna == 1 && sym == 'N' ) continue;
           }
+        if(sym == 'U') // FORCE CONVERSION OF URACILA TO THYMINE
+          sym = 'T';
+        if(sym != 'A' && sym != 'C' && sym != 'G' && sym != 'T')
+          continue;
         }
       #endif
 
