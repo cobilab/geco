@@ -6,12 +6,13 @@
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void     *Malloc     (size_t);
-void     *Calloc     (size_t, size_t);
-void     *Realloc    (void *, size_t, size_t);
-void     Free        (void *);
-uint64_t TotalMemory ();
-uint64_t MaxMemory   ();
+void     *Malloc      (size_t);
+void     *Calloc      (size_t, size_t);
+void     *Realloc     (void *, size_t, size_t);
+void     Free         (void *);
+uint64_t TotalMemory  ();
+uint64_t MaxMemory    ();
+void     PrintHRBytes (int64_t);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

@@ -92,7 +92,7 @@ uint64_t ReadNBits(int nBits, FILE *iFp)
 
 /*----------------------------------------------------------------------------*/
 
-void ArithEncodeSymbol(int symbol, int *counters, int totalCount, FILE *oFp)
+void AESym(int symbol, int *counters, int totalCount, FILE *oFp)
 
 	{
 	int low, high;

@@ -22,7 +22,7 @@ void GetInterval(int *low, int *high, int *count, int symbol);
 int GetSymbol(int *low, int *high, int *count, int target, int nSymbols);
 void WriteNBits(uint64_t bits, int nBits, FILE *oFp);
 uint64_t ReadNBits(int nBits, FILE *iFp);
-void ArithEncodeSymbol(int symbol, int *counters, int totalCount, FILE *oFp);
+void AESym(int symbol, int *counters, int totalCount, FILE *oFp);
 int ArithDecodeSymbol(int nSymbols, int *counters, int totalCount, FILE *iFp);
 
 #endif /* ARITH_AUX_H_INCLUDED */

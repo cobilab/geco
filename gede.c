@@ -7,34 +7,52 @@
 #include <time.h>
 #include "mem.h"
 #include "defs.h"
+#include "buffer.h"
+#include "alpha.h"
 #include "common.h"
 #include "context.h"
+#include "gfcm.h"
 #include "bitio.h"
 #include "arith.h"
 #include "arith_aux.h"
 
 //////////////////////////////////////////////////////////////////////////////
+// - - - - - - - - D E C O M P R E S S   R A W   S T R E A M - - - - - - - - -
+
+uint8_t DecompressStream(FILE *F, GFCM *M, CBUF *B, uint8_t nSym){
+  UpdateCBuffer(B);
+  GetIdx(B->buf+B->idx-1, M);
+  ComputeGFCM(M);
+  B->buf[B->idx] = ArithDecodeSymbol(nSym, (int *) M->freqs, (int) 
+  M->freqs[nSym], F);
+  UpdateGFCM(M, B->buf[B->idx]);
+  return B->buf[B->idx];
+  }
+
+//////////////////////////////////////////////////////////////////////////////
 // - - - - - - - - - - - - - - D E C O M P R E S S O R - - - - - - - - - - - -
 
-void Decompress(Parameters *P, CModel **cModels, uint8_t id)
-  {
+void Decompress(Parameters *P, CModel **cModels, uint8_t id){
   FILE        *Reader  = Fopen(P->tar[id], "r");
-  char        *name    = concatenate(P->tar[id], ".de");
+  char        *name    = ReplaceSubStr(P->tar[id], ".co", ".de"); 
   FILE        *Writter = Fopen(name, "w");
-  uint64_t    bases = 0;
-  uint32_t    n, s, k;
-  double      *cModelWeight, cModelTotalWeight = 0;
+  uint64_t    nSymbols = 0;
+  uint32_t    n, k;
+  double      *cModelWeight, cModelTotalWeight = 0, mA, mC, mG, mT;
   int32_t     idx = 0, idxOut = 0;
-  uint8_t     *outBuffer, *symbolBuffer, sym = 0, irSym = 0;
+  uint8_t     *outBuffer, *symbolBuffer, sym = 0, irSym = 0, *pos, extra;
   PModel      **pModel, *MX;
-  FloatPModel *floatPModel;
   #ifdef PROGRESS
   uint64_t    i = 0;
   #endif
 
   if(P->verbose)
-    fprintf(stderr, "Decompressing %"PRIu64" bases of target %d ...\n", 
+    fprintf(stderr, "Decompressing %"PRIu64" symbols of target %d ...\n", 
     P[id].size, id + 1);
+
+  Alpha *A = CreateAlphabet();
+  GFCM  *ExtraMod = NULL, *BinMod = NULL, *NMod = NULL, *LMod = NULL;
+  CBUF  *ExtraBuf = NULL, *BinBuf = NULL, *NBuf = NULL, *LBuf = NULL;
 
   startinputtingbits();
   start_decode(Reader);
@@ -43,108 +61,154 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id)
   garbage                = ReadNBits(46, Reader);
   P[id].size             = ReadNBits(46, Reader);
   P[id].gamma            = ReadNBits(32, Reader) / 65536.0;
+  P[id].col              = ReadNBits(32, Reader);
+  extra                  = ReadNBits( 1, Reader);
+  A->length = P[id].size;
+  if(extra == 1){
+    A->Ns                = ReadNBits( 1, Reader);
+    A->NL                = ReadNBits( 1, Reader);
+    A->lowBase           = ReadNBits( 8, Reader);
+    for(k = 0 ; k < MAX_ALPHA ; ++k)
+      A->bin[k]          = ReadNBits( 8, Reader);
+    }
   P[id].nModels          = ReadNBits(16, Reader);
-  for(k = 0 ; k < P[id].nModels ; ++k)
-    {
+  for(k = 0 ; k < P[id].nModels ; ++k){
     P[id].model[k].ctx   = ReadNBits(16, Reader);
     P[id].model[k].den   = ReadNBits(16, Reader);
     P[id].model[k].ir    = ReadNBits( 1, Reader);
     P[id].model[k].type  = ReadNBits( 1, Reader);
     }
 
-  bases         = P[id].size;
+  if(extra == 1){
+    BuildAlphabet(A);
+    PrintStreamInfo(A);
+    ExtraMod   = CreateGFCM(EXTRA_MOD_CTX, EXTRA_MOD_DEN, A->nSym);
+    ExtraBuf   = CreateCBuffer(DEF_BUF_SIZE, DEF_BUF_GUARD);
+    BinMod   = CreateGFCM(EXTRA_BIN_CTX, EXTRA_BIN_DEN, 2);
+    BinBuf   = CreateCBuffer(DEF_BUF_SIZE, DEF_BUF_GUARD);
+    if(A->Ns == 1){
+      NMod = CreateGFCM(EXTRA_N_CTX, EXTRA_N_DEN, 2);
+      NBuf = CreateCBuffer(DEF_BUF_SIZE, DEF_BUF_GUARD);
+      }
+    if(A->NL == 1){
+      LMod = CreateGFCM(EXTRA_L_CTX, EXTRA_L_DEN, 2);
+      LBuf = CreateCBuffer(DEF_BUF_SIZE, DEF_BUF_GUARD);
+      }
+    }
+
+  nSymbols      = P[id].size;
   pModel        = (PModel  **) Calloc(P[id].nModels, sizeof(PModel *));
   for(n = 0 ; n < P[id].nModels ; ++n)
     pModel[n]   = CreatePModel(ALPHABET_SIZE);
   MX            = CreatePModel(ALPHABET_SIZE);
-  floatPModel   = CreateFloatPModel(ALPHABET_SIZE);
   outBuffer     = (uint8_t  *) Calloc(BUFFER_SIZE,          sizeof(uint8_t));
   symbolBuffer  = (uint8_t  *) Calloc(BUFFER_SIZE + BGUARD, sizeof(uint8_t));
   symbolBuffer += BGUARD;
   cModelWeight  = (double   *) Calloc(P[id].nModels,        sizeof(double ));
 
-  for(n = 0 ; n < P[id].nModels ; ++n)
-    {
+  for(n = 0 ; n < P[id].nModels ; ++n){
     cModelWeight[n] = 1.0 / P[id].nModels;
     if(P[id].model[n].type == TARGET)
       cModels[n] = CreateCModel(P[id].model[n].ctx , P[id].model[n].den, 
-      P[id].model[n].ir, TARGET);
+      P[id].model[n].ir, TARGET, P[id].col);
     }
 
-  while(bases--)
-    {
-    memset((void *) floatPModel->freqs, 0, ALPHABET_SIZE * sizeof(double));
+  while(nSymbols--){
+    #ifdef PROGRESS
+    CalcProgress(P[id].size, ++i);
+    #endif
 
-    for(n = 0 ; n < P[id].nModels ; ++n)
-      {
-      GetPModelIdx(symbolBuffer + idx - 1, cModels[n]);
+    mA = mC = mG = mT = 0;
+
+    pos = &symbolBuffer[idx-1];
+    for(n = 0 ; n < P[id].nModels ; ++n){
+      GetPModelIdx(pos, cModels[n]);
       ComputePModel(cModels[n], pModel[n]);
-     
-      // The probabilities estimated by each cModel are weighted
-      // according to the set of current weights.
-      for(s = 0 ; s < ALPHABET_SIZE ; ++s)
-        floatPModel->freqs[s] += (double) pModel[n]->freqs[s] /
-        pModel[n]->sum * cModelWeight[n];
+
+      double factor = cModelWeight[n] / pModel[n]->sum;
+      mA += (double) pModel[n]->freqs[0] * factor;
+      mC += (double) pModel[n]->freqs[1] * factor;
+      mG += (double) pModel[n]->freqs[2] * factor;
+      mT += (double) pModel[n]->freqs[3] * factor;    
       }
 
-    MX->sum = 0;
-    for(s = 0 ; s < ALPHABET_SIZE ; ++s)
-      {
-      MX->freqs[s] = 1 + (unsigned) (floatPModel->freqs[s] * MX_PMODEL);
-      MX->sum     += MX->freqs[s];
-      }
+    MX->sum  = MX->freqs[0] = 1 + (unsigned) (mA * MX_PMODEL);
+    MX->sum += MX->freqs[1] = 1 + (unsigned) (mC * MX_PMODEL);
+    MX->sum += MX->freqs[2] = 1 + (unsigned) (mG * MX_PMODEL);
+    MX->sum += MX->freqs[3] = 1 + (unsigned) (mT * MX_PMODEL);
 
     symbolBuffer[idx] = sym = ArithDecodeSymbol(ALPHABET_SIZE, (int *) 
     MX->freqs, (int) MX->sum, Reader);
     outBuffer[idxOut] = NumToDNASym(sym);
 
     cModelTotalWeight = 0;
-    for(n = 0 ; n < P[id].nModels ; ++n)
-      {
+    for(n = 0 ; n < P[id].nModels ; ++n){
       cModelWeight[n] = Power(cModelWeight[n], P[id].gamma) * (double)
       pModel[n]->freqs[sym] / pModel[n]->sum;
 
       cModelTotalWeight += cModelWeight[n];
 
-      if(P[id].model[n].type == TARGET)
-        {
+      if(P[id].model[n].type == TARGET){
         UpdateCModelCounter(cModels[n], sym);
-        if(cModels[n]->ir == 1)                          // Inverted repeats
-          {
+        if(cModels[n]->ir == 1){                      // Inverted repeats
           irSym = GetPModelIdxIR(symbolBuffer+idx, cModels[n]);
           UpdateCModelCounterIr(cModels[n], irSym);
           }
         }
       }
 
-    // Re-normalize the weights
-    for(n = 0 ; n < P->nModels ; ++n)
+    for(n = 0 ; n < P->nModels ; ++n) // RENORMALIZE THE WEIGHTS
       cModelWeight[n] /= cModelTotalWeight;
 
-
-    if(++idx == BUFFER_SIZE)
-      {
-      memcpy(symbolBuffer - BGUARD, symbolBuffer + idx - BGUARD, BGUARD);
-      idx = 0;
+    if(extra == 1 && sym == A->lowBase){
+      if(DecompressStream(Reader, BinMod, BinBuf, 2) == 1){
+        if(DecompressStream(Reader, NMod, NBuf, 2) == 1){
+          outBuffer[idxOut] = 'N';
+          }
+        else if(DecompressStream(Reader, LMod, LBuf, 2) == 1){
+          outBuffer[idxOut] = '\n';
+          }
+        else{
+          outBuffer[idxOut] = A->symbolic[DecompressStream(Reader, ExtraMod,
+          ExtraBuf, ExtraMod->nSym)];
+          }
+        }
       }
 
-    if(++idxOut == BUFFER_SIZE)
-      {
+    if(++idxOut == BUFFER_SIZE){
       fwrite(outBuffer, 1, idxOut, Writter);
       idxOut = 0;
       }
 
-    #ifdef PROGRESS
-    CalcProgress(P[id].size, ++i);
-    #endif
+    if(++idx == BUFFER_SIZE){
+      memcpy(symbolBuffer-BGUARD, symbolBuffer+idx-BGUARD, BGUARD);
+      idx = 0;
+      }
     }
+
   if(idxOut != 0) 
     fwrite(outBuffer, 1, idxOut, Writter);
 
   finish_decode();
   doneinputtingbits();
-  fclose(Writter);
 
+  fclose(Writter);
+  if(extra == 1){
+    RemoveCBuffer(ExtraBuf);
+    RemoveCBuffer(BinBuf);
+    FreeGFCM(ExtraMod);
+    FreeGFCM(BinMod);
+    if(A->Ns == 1){
+      RemoveCBuffer(NBuf);
+      FreeGFCM(NMod);
+      }
+    if(A->NL == 1){
+      RemoveCBuffer(LBuf);
+      FreeGFCM(LMod);
+      }
+
+    }
+  FreeAlphabet(A);
   Free(MX);
   Free(name);
   Free(cModelWeight);
@@ -153,14 +217,11 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id)
       ResetCModelIdx(cModels[n]);
     else
       FreeCModel(cModels[n]);
-  for(n = 0 ; n < P->nModels ; ++n)
-    {
+  for(n = 0 ; n < P->nModels ; ++n){
     Free(pModel[n]->freqs);
     Free(pModel[n]);
     }
   Free(pModel);
-  Free(floatPModel->freqs);
-  Free(floatPModel);
   Free(outBuffer);
   Free(symbolBuffer-BGUARD);
   fclose(Reader);
@@ -195,7 +256,7 @@ CModel **LoadReference(Parameters *P)
   for(n = 0 ; n < P->nModels ; ++n)
     if(P->model[n].type == REFERENCE)
       cModels[n] = CreateCModel(P->model[n].ctx, P->model[n].den,
-      P->model[n].ir, REFERENCE);
+      P->model[n].ir, REFERENCE, P->col);
 
   P->checksum   = 0;
   while((k = fread(readerBuffer, 1, BUFFER_SIZE, Reader)))
@@ -301,6 +362,14 @@ int32_t main(int argc, char *argv[])
     checksum[n]    = ReadNBits(46, Reader);
     P[n].size      = ReadNBits(46, Reader);
     P[n].gamma     = ReadNBits(32, Reader) / 65536.0;
+    P[n].col       = ReadNBits(32, Reader);
+    if(ReadNBits(1, Reader) == 1){
+      garbage      = ReadNBits( 1, Reader);
+      garbage      = ReadNBits( 1, Reader);
+      garbage      = ReadNBits( 8, Reader);
+      for(k = 0 ; k < MAX_ALPHA ; ++k)
+        garbage    = ReadNBits( 8, Reader);
+      }
     P[n].nModels   = ReadNBits(16, Reader);
     P[n].model     = (ModelPar *) Calloc(P[n].nModels, sizeof(ModelPar));
     for(k = 0 ; k < P[n].nModels ; ++k)

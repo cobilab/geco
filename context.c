@@ -15,427 +15,340 @@ static HCCounters auxCounters;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void InitHashTable(CModel *cModel)
-  { 
-  cModel->hTable.entries = (Entry **) Calloc(HASH_SIZE, sizeof(Entry *));
-  cModel->hTable.counters = (HCCounters **) Calloc(HASH_SIZE,
-  sizeof(HCCounters *));
-  cModel->hTable.size = (ENTMAX *) Calloc(HASH_SIZE, sizeof(ENTMAX));
+static uint64_t XHASH(uint64_t x){
+  return (x * 786433 + 196613) % 68719476735;
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void FreeCModel(CModel *cModel)
-  {
-  U32 k;
+static void InitHashTable(CModel *M, U32 c){ 
+  uint32_t k;
+  M->hTable.maxC    = c;
+  M->hTable.index   = (ENTMAX *) Calloc(HASH_SIZE, sizeof(ENTMAX));
+  M->hTable.entries = (Entry **) Calloc(HASH_SIZE, sizeof(Entry *));
+  for(k = 0 ; k < HASH_SIZE ; ++k)
+    M->hTable.entries[k] = (Entry *) Calloc(M->hTable.maxC, sizeof(Entry));
+  }
 
-  if(cModel->mode == HASH_TABLE_MODE)
-    {
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+void FreeCModel(CModel *M){
+  U32 k;
+  if(M->mode == HASH_TABLE_MODE){
     for(k = 0 ; k < HASH_SIZE ; ++k)
-      {
-      if(cModel->hTable.size[k] != 0)
-        Free(cModel->hTable.entries[k]);
-      if(cModel->hTable.counters[k] != NULL)
-        Free(cModel->hTable.counters[k]);
-      }
-    Free(cModel->hTable.entries);
-    Free(cModel->hTable.counters);
-    Free(cModel->hTable.size);
+      Free(M->hTable.entries[k]);
+    Free(M->hTable.entries);
+    Free(M->hTable.index);
     }
   else // TABLE_MODE
-    Free(cModel->array.counters);
-
-  Free(cModel);
+    Free(M->array.counters);
+  Free(M);
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void InitArray(CModel *cModel)
-  {
-  cModel->array.counters = (ACCounter *) Calloc(cModel->nPModels << 2, 
-  sizeof(ACCounter));
+static void InitArray(CModel *M){
+  M->array.counters = (ACC *) Calloc(M->nPModels<<2, sizeof(ACC));
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void InsertKey(HashTable *hTable, U32 hIndex, U64 idx)
-  {
-  hTable->entries[hIndex] = (Entry *) Realloc(hTable->entries[hIndex],
-  (hTable->size[hIndex] + 1) * sizeof(Entry), sizeof(Entry));
-  hTable->entries[hIndex][hTable->size[hIndex]++].key = (U32)(idx&0xffffffff);
+static void InsertKey(HashTable *H, U32 hi, U64 idx, U8 s){
+  if(++H->index[hi] == H->maxC)
+    H->index[hi] = 0;
+
+  #ifdef PREC32B
+  H->entries[hi][H->index[hi]].key = (U32)(idx&0xffffffff);
+  #else
+  H->entries[hi][H->index[hi]].key = (U16)(idx&0xffff);
+  #endif  
+  H->entries[hi][H->index[hi]].counters = (0x01<<(s<<1));
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-static void InsertCounters(HashTable *hTable, U32 hIndex, U32 nHCCounters, 
-U32 k, U32 smallCounters)
-  {
-  hTable->counters[hIndex] = (HCCounters *) Realloc(hTable->counters[hIndex], 
-  (nHCCounters + 1) * sizeof(HCCounters), sizeof(HCCounters));
+static HCC *GetHCCounters(HashTable *H, U64 key){
+  U32 n, hIndex = key % HASH_SIZE;
+  #ifdef PREC32B
+  U32 b = key & 0xffffffff;
+  #else
+  U16 b = key & 0xffff;
+  #endif
 
-  if(k < nHCCounters)
-    memmove(hTable->counters[hIndex][k + 1], hTable->counters[hIndex][k],
-      (nHCCounters - k) * sizeof(HCCounters));
-
-  hTable->counters[hIndex][k][0] =  smallCounters &  0x03;
-  hTable->counters[hIndex][k][1] = (smallCounters & (0x03 << 2)) >> 2;
-  hTable->counters[hIndex][k][2] = (smallCounters & (0x03 << 4)) >> 4;
-  hTable->counters[hIndex][k][3] = (smallCounters & (0x03 << 6)) >> 6;
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-static HCCounter *GetHCCounters(HashTable *hTable, U64 key)
-  {
-  U32 k = 0, n, hIndex = key % HASH_SIZE;
-  U64 b = key & 0xffffffff00000000;
-
-  for(n = 0 ; n < hTable->size[hIndex] ; n++)
-    {
-    if(((U64) hTable->entries[hIndex][n].key|b) == key)
-      {
-      switch(hTable->entries[hIndex][n].counters)
-        {
-        case 0:
-        return hTable->counters[hIndex][k];
-
-        default:
-        auxCounters[0] =  hTable->entries[hIndex][n].counters &  0x03;
-        auxCounters[1] = (hTable->entries[hIndex][n].counters & (0x03<<2))>>2;
-        auxCounters[2] = (hTable->entries[hIndex][n].counters & (0x03<<4))>>4;
-        auxCounters[3] = (hTable->entries[hIndex][n].counters & (0x03<<6))>>6;
-        return auxCounters;
-        }
+  #ifdef FSEARCHMODE
+  U32 pos = H->index[hIndex];
+  // FROM INDEX-1 TO 0
+  for(n = pos+1 ; n-- ; ){
+    if(H->entries[hIndex][n].key == b){
+      auxCounters[0] =  H->entries[hIndex][n].counters &  0x03;
+      auxCounters[1] = (H->entries[hIndex][n].counters & (0x03<<2))>>2;
+      auxCounters[2] = (H->entries[hIndex][n].counters & (0x03<<4))>>4;
+      auxCounters[3] = (H->entries[hIndex][n].counters & (0x03<<6))>>6;
+      return auxCounters;
       }
-
-    if(hTable->entries[hIndex][n].counters == 0)
-      k++;
     }
+
+  // FROM MAX_COLISIONS TO INDEX
+  for(n = (H->maxC-1) ; n > pos ; --n){
+    if(H->entries[hIndex][n].key == b){
+      auxCounters[0] =  H->entries[hIndex][n].counters &  0x03;
+      auxCounters[1] = (H->entries[hIndex][n].counters & (0x03<<2))>>2;
+      auxCounters[2] = (H->entries[hIndex][n].counters & (0x03<<4))>>4;
+      auxCounters[3] = (H->entries[hIndex][n].counters & (0x03<<6))>>6;
+      return auxCounters;
+      }
+    }
+  #else
+  // FROM 0 TO MAX
+  for(n = 0 ; n < H->maxC ; ++n){
+    if(H->entries[hIndex][n].key == b){
+      auxCounters[0] =  H->entries[hIndex][n].counters &  0x03;
+      auxCounters[1] = (H->entries[hIndex][n].counters & (0x03<<2))>>2;
+      auxCounters[2] = (H->entries[hIndex][n].counters & (0x03<<4))>>4;
+      auxCounters[3] = (H->entries[hIndex][n].counters & (0x03<<6))>>6;
+      return auxCounters;
+      }
+    }
+  #endif
 
   return NULL;
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-PModel *CreatePModel(U32 nSymbols)
-  {
-  PModel *pModel;
-  pModel = (PModel *) Malloc(sizeof(PModel));
-  pModel->freqs = (U32 *) Malloc(nSymbols * sizeof(U32));
-  return pModel;
+PModel *CreatePModel(U32 n){
+  PModel *P = (PModel *) Malloc(sizeof(PModel));
+  P->freqs  = (U32    *) Malloc(n* sizeof(U32));
+  return P;
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-FloatPModel *CreateFloatPModel(U32 nSymbols)
-  {
-  FloatPModel *floatPModel;
-  floatPModel = (FloatPModel *) Malloc(sizeof(FloatPModel));
-  floatPModel->freqs = (double *) Malloc(nSymbols * sizeof(double));
-  return floatPModel;
+FloatPModel *CreateFloatPModel(U32 n){
+  FloatPModel *F = (FloatPModel *) Malloc(sizeof(FloatPModel));
+  F->freqs = (double *) Malloc(n * sizeof(double));
+  return F;
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#ifdef SWAP
+void SwapPos(Entry *A, Entry *B){
+  Entry *tmp = B;
+  *B = *A;
+  A = tmp;
+  }
+#endif
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void UpdateCModelCounterIr(CModel *M, U32 symbol)
-  {
-  U32       n;
-  ACCounter *aCounters;
-  U64       idx = M->pModelIdxIR;
+void UpdateCModelCounterIr(CModel *M, U32 sym){
+  U32 n;
+  ACC *AC;
+  U64 idx = M->pModelIdxIR;
 
-  if(M->mode == HASH_TABLE_MODE)
-    {
-    U8 smallCounter;
-    U32 i, k = 0, nHCCounters, hIndex = idx % HASH_SIZE;
-    U64 b = idx & 0xffffffff00000000;
+  if(M->mode == HASH_TABLE_MODE){
+    U8  counter;
+    U32 s, hIndex = idx = (XHASH(idx)) % HASH_SIZE;
+    #ifdef PREC32B
+    U32 b = idx & 0xffffffff;
+    #else
+    U16 b = idx & 0xffff;
+    #endif
 
-    for(n = 0 ; n < M->hTable.size[hIndex] ; n++)
-      {
-      if((M->hTable.entries[hIndex][n].key|b) == idx)
-        {
-        if(M->hTable.entries[hIndex][n].counters == 0)  // Large counters
-          {
-          if(++M->hTable.counters[hIndex][k][symbol] == 255)
-            {
-            M->hTable.counters[hIndex][k][0] >>= 1;
-            M->hTable.counters[hIndex][k][1] >>= 1;
-            M->hTable.counters[hIndex][k][2] >>= 1;
-            M->hTable.counters[hIndex][k][3] >>= 1;
-            }
+    for(n = 0 ; n < M->hTable.maxC ; n++){
+      if(M->hTable.entries[hIndex][n].key == b){
+        counter = (M->hTable.entries[hIndex][n].counters>>(sym<<1))&0x03;
+        if(counter == 3){
+          for(s = 0 ; s < 4 ; ++s){
+            if(s != sym){
+              counter =
+              ((M->hTable.entries[hIndex][n].counters>>(s<<1))&0x03)>>1;
+              M->hTable.entries[hIndex][n].counters &= ~(0x03<<(s<<1));
+              M->hTable.entries[hIndex][n].counters |= (counter<<(s<<1));
+              }
+            } // MOVE TO FRONT
+          #ifdef SWAP
+          SwapPos(&M->hTable.entries[hIndex][n], 
+          &M->hTable.entries[hIndex][M->hTable.index[hIndex]]);
+          #endif
           return;
           }
-        
-        smallCounter = (M->hTable.entries[hIndex][n].counters>>(symbol<<1))&0x03;
-         // If "counters" is non-zero, then this is at least the
-         // second time that this key is generated. Therefore,
-         // if the "small" counter of the symbol if full (i.e.,
-         // is equal to 3), then the "large" counters have to be
-         // inserted into the right position.
-        if(smallCounter == 3)
-          {
-          nHCCounters = k;
-          for(i = n + 1 ; i < M->hTable.size[hIndex] ; ++i)
-            if(M->hTable.entries[hIndex][i].counters == 0)
-              nHCCounters++;
-
-          InsertCounters(&M->hTable, hIndex, nHCCounters, k,
-          M->hTable.entries[hIndex][n].counters);
-          M->hTable.entries[hIndex][n].counters = 0;
-          M->hTable.counters[hIndex][k][symbol]++;
-          return;
-          }
-        else // There is still room for incrementing the "small" counter.
-          {
-          smallCounter++;
-          M->hTable.entries[hIndex][n].counters &= ~(0x03<<(symbol<<1));
-          M->hTable.entries[hIndex][n].counters |= (smallCounter<<(symbol<<1));
+        else{ // THERE IS STILL SPACE FOR INCREMENT COUNTER
+          ++counter;
+          M->hTable.entries[hIndex][n].counters &= ~(0x03<<(sym<<1));
+          M->hTable.entries[hIndex][n].counters |= (counter<<(sym<<1));
+          #ifdef SWAP
+          SwapPos(&M->hTable.entries[hIndex][n],
+          &M->hTable.entries[hIndex][M->hTable.index[hIndex]]);
+          #endif
           return;
           }
         }
-
-      // Keeps counting the number of HCCounters in this entry
-      if(!M->hTable.entries[hIndex][n].counters)
-        k++;
       }
-
-    // LIMITING ENTRYSIZE
-    if(M->hTable.size[hIndex] == 255)
-      return;
-
-    // If key not found
-    InsertKey(&M->hTable, hIndex, idx);
-    M->hTable.entries[hIndex][M->hTable.size[hIndex]-1].counters = 
-    (0x01<<(symbol<<1));
+    InsertKey(&M->hTable, hIndex, b, sym); // KEY NOT FOUND: WRITE ON OLDEST
     }
-  else
-    {
-    aCounters = &M->array.counters[idx << 2];
-    aCounters[symbol]++;
-    if(aCounters[symbol] == M->maxCount && M->maxCount != 0)
-      {    
-      aCounters[0] >>= 1;
-      aCounters[1] >>= 1;
-      aCounters[2] >>= 1;
-      aCounters[3] >>= 1;
+  else{
+    AC = &M->array.counters[idx << 2];
+    if(++AC[sym] == M->maxCount && M->maxCount != 0){
+      AC[0] >>= 1;
+      AC[1] >>= 1;
+      AC[2] >>= 1;
+      AC[3] >>= 1;
       }
     }
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void UpdateCModelCounter(CModel *cModel, U32 symbol)
-  {
-  unsigned  n;
-  ACCounter *aCounters;
-  uint64_t  pModelIdx = cModel->pModelIdx;
+void UpdateCModelCounter(CModel *M, U32 sym){
+  U32 n;
+  ACC *AC;
+  U64 idx = M->pModelIdx;
 
-  if(cModel->mode == HASH_TABLE_MODE)
-    {
-    unsigned char smallCounter;
-    unsigned i, k = 0;
-    unsigned nHCCounters;            // The number of HCCounters in this entry
-    U32 hIndex = pModelIdx % HASH_SIZE;                 // The hash index
-    U64 b = pModelIdx & 0xffffffff00000000;
+  if(M->mode == HASH_TABLE_MODE){
+    U8   counter;
+    U32  s, hIndex = (idx = XHASH(idx)) % HASH_SIZE;
+    #ifdef PREC32B
+    U32 b = idx & 0xffffffff;
+    #else
+    U16 b = idx & 0xffff;
+    #endif
 
-    for(n = 0 ; n < cModel->hTable.size[hIndex] ; n++)
-      {
-      //if(((uint64_t) cModel->hTable.entries[hIndex][n].key * HASH_SIZE) + 
-      //hIndex == pModelIdx)
-      if((cModel->hTable.entries[hIndex][n].key|b) == pModelIdx)
-        {
-        // If "counters" is zero, then update the "large" counters.
-        if(cModel->hTable.entries[hIndex][n].counters == 0)
-          {
-          if(++cModel->hTable.counters[hIndex][k][symbol] == 255)
-            {
-            cModel->hTable.counters[hIndex][k][0] >>= 1;
-            cModel->hTable.counters[hIndex][k][1] >>= 1;
-            cModel->hTable.counters[hIndex][k][2] >>= 1;
-            cModel->hTable.counters[hIndex][k][3] >>= 1;
+    for(n = 0 ; n < M->hTable.maxC ; n++){
+      if(M->hTable.entries[hIndex][n].key == b){
+        counter = (M->hTable.entries[hIndex][n].counters>>(sym<<1))&0x03;
+        if(counter == 3){
+          for(s = 0 ; s < 4 ; ++s){
+            if(s != sym){
+              counter = 
+              ((M->hTable.entries[hIndex][n].counters>>(s<<1))&0x03)>>1;
+              M->hTable.entries[hIndex][n].counters &= ~(0x03<<(s<<1));
+              M->hTable.entries[hIndex][n].counters |= (counter<<(s<<1));
+              }
             }
+          #ifdef SWAP
+          SwapPos(&M->hTable.entries[hIndex][n],
+          &M->hTable.entries[hIndex][M->hTable.index[hIndex]]);
+          #endif
           return;
           }
-        
-        smallCounter = (cModel->hTable.entries[hIndex][n].counters >> (symbol 
-        << 1)) & 0x03;
-         // If "counters" is non-zero, then this is at least the
-         // second time that this key is generated. Therefore,
-         // if the "small" counter of the symbol if full (i.e.,
-         // is equal to 3), then the "large" counters have to be
-         // inserted into the right position.
-        if(smallCounter == 3)
-          {
-          nHCCounters = k;
-          for(i = n + 1 ; i < cModel->hTable.size[hIndex] ; i++)
-            if(cModel->hTable.entries[hIndex][i].counters == 0)
-              nHCCounters++;
-
-          InsertCounters(&cModel->hTable, hIndex, nHCCounters, k,
-          cModel->hTable.entries[hIndex][n].counters);
-          cModel->hTable.entries[hIndex][n].counters = 0;
-          cModel->hTable.counters[hIndex][k][symbol]++;
-          return;
-          }
-        else // There is still room for incrementing the "small" counter.
-          {
-          smallCounter++;
-          cModel->hTable.entries[hIndex][n].counters &= ~(0x03<<(symbol<<1));
-          cModel->hTable.entries[hIndex][n].counters |= (smallCounter<<(symbol
-          <<1));
+        else{ // THERE IS STILL SPACE FOR INCREMENT COUNTER
+          ++counter;
+          M->hTable.entries[hIndex][n].counters &= ~(0x03<<(sym<<1));
+          M->hTable.entries[hIndex][n].counters |= (counter<<(sym<<1));
+          #ifdef SWAP
+          SwapPos(&M->hTable.entries[hIndex][n],
+          &M->hTable.entries[hIndex][M->hTable.index[hIndex]]);
+          #endif
           return;
           }
         }
-
-      // Keeps counting the number of HCCounters in this entry
-      if(!cModel->hTable.entries[hIndex][n].counters)
-        k++;
       }
-
-    // LIMITING ENTRYSIZE
-    if(cModel->hTable.size[hIndex] == 255)
-      return;
-
-    // If key not found
-    InsertKey(&cModel->hTable, hIndex, pModelIdx);
-    cModel->hTable.entries[hIndex][cModel->hTable.size[hIndex]-1].
-    counters = (0x01 << (symbol << 1));
+    InsertKey(&M->hTable, hIndex, b, sym); // KEY NOT FOUND: WRITE ON OLDEST
     }
-  else
-    {
-    aCounters = &cModel->array.counters[pModelIdx << 2];
-    aCounters[symbol]++;
-    if(aCounters[symbol] == cModel->maxCount && cModel->maxCount != 0)
-      {    
-      aCounters[0] >>= 1;
-      aCounters[1] >>= 1;
-      aCounters[2] >>= 1;
-      aCounters[3] >>= 1;
+  else{
+    AC = &M->array.counters[idx << 2];
+    if(++AC[sym] == M->maxCount && M->maxCount != 0){    
+      AC[0] >>= 1;
+      AC[1] >>= 1;
+      AC[2] >>= 1;
+      AC[3] >>= 1;
       }
     }
   }
 
-//////////////////////////////////////////////////////////////////////////////
-
-void UpdateCModelCounterRM(CModel *cModel, U32 symbol)
-  {
-  ACCounter *aCounters;
-  uint64_t  pModelIdx = cModel->pModelIdx;
-
-  aCounters = &cModel->array.counters[pModelIdx << 2];
-  aCounters[symbol]--;
-  if(aCounters[symbol] == 0)
-    {
-    aCounters[0] <<= 1;
-    aCounters[1] <<= 1;
-    aCounters[2] <<= 1;
-    aCounters[3] <<= 1;
-    }
-  }
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-CModel *CreateCModel(U32 ctx, U32 aDen, U32 ir, U8 ref) 
-  {
+CModel *CreateCModel(U32 ctx, U32 aDen, U32 ir, U8 ref, U32 col){
   CModel *M = (CModel *) Calloc(1, sizeof(CModel));
-  U64    prod = 1, *multipliers;
+  U64    prod = 1, *mult;
   U32    n;
 
-  if(ctx > MAX_HASH_CTX)
-    {
+  if(ctx > MAX_HASH_CTX){
     fprintf(stderr, "Error: context size cannot be greater than %d\n", 
     MAX_HASH_CTX);
     exit(1);
     }
-  
-  multipliers      = (U64 *) Calloc(ctx, sizeof(U64));
-  M->nPModels      = (U64) pow(ALPHABET_SIZE, ctx);
-  M->ctx           = ctx;
-  M->alphaDen      = aDen;
-  M->pModelIdx     = 0;
-  M->pModelIdxIR   = M->nPModels - 1;
-  M->ir            = ir  == 0 ? 0 : 1;
-  M->ref           = ref == 0 ? 0 : 1;
 
-  if(ctx >= HASH_TABLE_BEGIN_CTX)
-    {
+  mult           = (U64 *) Calloc(ctx, sizeof(U64));
+  M->nPModels    = (U64) pow(ALPHABET_SIZE, ctx);
+  M->ctx         = ctx;
+  M->alphaDen    = aDen;
+  M->pModelIdx   = 0;
+  M->pModelIdxIR = M->nPModels - 1;
+  M->ir          = ir  == 0 ? 0 : 1;
+  M->ref         = ref == 0 ? 0 : 1;
+
+  if(ctx >= HASH_TABLE_BEGIN_CTX){
     M->mode     = HASH_TABLE_MODE;
     M->maxCount = DEFAULT_MAX_COUNT >> 8;
-    InitHashTable(M);
+    InitHashTable(M, col);
     }
-  else 
-    {
+  else{
     M->mode     = ARRAY_MODE;
     M->maxCount = DEFAULT_MAX_COUNT;
     InitArray(M);
     }
 
-  for(n = 0 ; n < M->ctx ; ++n)
-    {
-    multipliers[n] = prod;
+  for(n = 0 ; n < M->ctx ; ++n){
+    mult[n] = prod;
     prod <<= 2;
     }
 
-  M->multiplier = multipliers[M->ctx-1];
+  M->multiplier = mult[M->ctx-1];
 
+  Free(mult);
   return M;
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void ResetCModelIdx(CModel *M)
-  {
+void ResetCModelIdx(CModel *M){
   M->pModelIdx   = 0;
   M->pModelIdxIR = M->nPModels - 1;
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-inline U8 GetPModelIdxIR(U8 *p, CModel *M)
-  {
+inline U8 GetPModelIdxIR(U8 *p, CModel *M){
   M->pModelIdxIR = (M->pModelIdxIR>>2)+GetCompNum(*p)*M->multiplier;
   return GetCompNum(*(p - M->ctx));
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-inline void GetPModelIdx(U8 *p, CModel *M)
-  {
+inline void GetPModelIdx(U8 *p, CModel *M){
   M->pModelIdx = ((M->pModelIdx-*(p-M->ctx)*M->multiplier)<<2)+*p;
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void ComputePModel(CModel *cModel, PModel *pModel)
-  {
-  HCCounter *hCounters;
-  ACCounter *aCounters;
+void ComputePModel(CModel *M, PModel *P){
+  HCC *hCounters;
+  ACC *aCounters;
 
-  if(cModel->mode == HASH_TABLE_MODE)
-    {
-    if(!(hCounters = GetHCCounters(&cModel->hTable, cModel->pModelIdx)))
+  if(M->mode == HASH_TABLE_MODE){
+    if(!(hCounters = GetHCCounters(&M->hTable, XHASH(M->pModelIdx))))
       hCounters = zeroCounters;
-    pModel->freqs[0] = 1 + cModel->alphaDen * hCounters[0];
-    pModel->freqs[1] = 1 + cModel->alphaDen * hCounters[1];
-    pModel->freqs[2] = 1 + cModel->alphaDen * hCounters[2];
-    pModel->freqs[3] = 1 + cModel->alphaDen * hCounters[3];
+    P->freqs[0] = 1 + M->alphaDen * hCounters[0];
+    P->freqs[1] = 1 + M->alphaDen * hCounters[1];
+    P->freqs[2] = 1 + M->alphaDen * hCounters[2];
+    P->freqs[3] = 1 + M->alphaDen * hCounters[3];
     }
-  else
-    {
-    aCounters = &cModel->array.counters[cModel->pModelIdx << 2];
-    pModel->freqs[0] = 1 + cModel->alphaDen * aCounters[0];
-    pModel->freqs[1] = 1 + cModel->alphaDen * aCounters[1];
-    pModel->freqs[2] = 1 + cModel->alphaDen * aCounters[2];
-    pModel->freqs[3] = 1 + cModel->alphaDen * aCounters[3];
+  else{
+    aCounters = &M->array.counters[M->pModelIdx << 2];
+    P->freqs[0] = 1 + M->alphaDen * aCounters[0];
+    P->freqs[1] = 1 + M->alphaDen * aCounters[1];
+    P->freqs[2] = 1 + M->alphaDen * aCounters[2];
+    P->freqs[3] = 1 + M->alphaDen * aCounters[3];
     }
 
-  pModel->sum = pModel->freqs[0] + pModel->freqs[1] + pModel->freqs[2] + 
-  pModel->freqs[3];
+  P->sum = P->freqs[0] + P->freqs[1] + P->freqs[2] + P->freqs[3];
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-double PModelSymbolNats(PModel *pModel, U32 symbol)
-  {
-  return log((double) pModel->sum / pModel->freqs[symbol]);
+double PModelSymbolNats(PModel *P, U32 s){
+  return log((double) P->sum / P->freqs[s]);
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

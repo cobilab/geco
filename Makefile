@@ -1,16 +1,17 @@
 #============================================================================#
-#             GeCo & GeDe 2014, IEETA/DETI, UNIVERSITY OF AVEIRO             #
+#           GeCo & GeDe 2014-2015 IEETA/DETI, UNIVERSITY OF AVEIRO           #
 #============================================================================#
 BIN    = .
 CC     = gcc
-CPLP   = #-w #-g
+CPLP   = -g
 #-----------------------------------------------------------------------------
-CFLAGS = -O3 -Wall $(CPLP) -DPROGRESS 
+CFLAGS = -O3 -Wall $(CPLP)
 #-----------------------------------------------------------------------------
 LIBS   = -lm
 DEPS   = defs.h
 PROGS  = $(BIN)/GeCo $(BIN)/GeDe
-OBJS   = mem.o common.o context.o bitio.o arith.o arith_aux.o 
+OBJS   = mem.o common.o buffer.o alpha.o context.o gfcm.o bitio.o arith.o \
+         arith_aux.o 
 #-----------------------------------------------------------------------------
 all:
 	$(MAKE) progs
@@ -21,10 +22,16 @@ $(BIN)/GeDe: gede.c $(DEPS) $(OBJS)
 	$(CC) $(CFLAGS) -o $(BIN)/GeDe gede.c $(OBJS) $(LIBS)
 mem.o: mem.c mem.h $(DEPS)
 	$(CC) -c $(CFLAGS) mem.c
+buffer.o: buffer.c buffer.h $(DEPS)
+	$(CC) -c $(CFLAGS) buffer.c
 common.o: common.c common.h $(DEPS)
 	$(CC) -c $(CFLAGS) common.c
 context.o: context.c context.h $(DEPS)
 	$(CC) -c $(CFLAGS) context.c
+alpha.o: alpha.c alpha.h $(DEPS)
+	$(CC) -c $(CFLAGS) alpha.c
+gfcm.o: gfcm.c gfcm.h $(DEPS)
+	$(CC) -c $(CFLAGS) gfcm.c
 bitio.o: bitio.c bitio.h
 	$(CC) -c $(CFLAGS) bitio.c
 arith.o: arith.c arith.h

@@ -44,17 +44,30 @@ double Power(double a, double b)
   return p;
   }
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-uint64_t NBytesInFile(FILE *file)
-  {
-  uint64_t size = 0;
-  fseek(file, 0, SEEK_END);
-  if((size = ftell(file)) < 1000)
-    {
-    fprintf(stderr, "Error: input file is very small!\n");
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// REPLACE STRING
+//
+char *ReplaceSubStr(char *str, char *a, char *b){
+  char *buf = (char *) Calloc(MAX_STR, sizeof(char));
+  char *p;
+  if(strlen(str) > MAX_STR){
+    fprintf(stderr, "[x] Error: string too long!\n");
     exit(1);
     }
+  if(!(p = strstr(str, a)))
+    return str;
+  strncpy(buf, str, p-str);
+  buf[p-str] = '\0';
+  sprintf(buf+(p-str), "%s%s", b, p+strlen(a));
+  return buf;
+  }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+uint64_t NBytesInFile(FILE *file){
+  uint64_t size = 0;
+  fseeko(file, 0, SEEK_END);
+  size = ftello(file);
   rewind(file);
   return size;
   }
@@ -69,8 +82,7 @@ uint64_t NDNASyminFile(FILE *file)
 
   while((k = fread(buffer, 1, BUFFER_SIZE, file)))
     for(idx = 0 ; idx < k ; ++idx)
-      switch(buffer[idx])
-        {
+      switch(buffer[idx]){
         case 'A': ++nSymbols; break;
         case 'T': ++nSymbols; break;
         case 'C': ++nSymbols; break;
@@ -269,12 +281,17 @@ char *RepString(const char *str, const char *old, const char *new)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-uint32_t ArgsNumber(uint32_t def, char *arg[], uint32_t n, char *str)
-  {
-  for( ; --n ; )
-    if(!strcmp(str, arg[n]))
-      return atol(arg[n+1]);
-  return def;
+uint32_t ArgsNum(uint32_t d, char *a[], uint32_t n, char *s, uint32_t l,
+uint32_t u){
+  uint32_t x;
+  for( ; --n ; ) if(!strcmp(s, a[n])){
+    if((x = atol(a[n+1])) < l || x > u){
+      fprintf(stderr, "[x] Invalid number! Interval: [%u;%u].\n", l, u);
+      exit(EXIT_FAILURE);
+      }
+    return x;
+    }
+  return d;
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -511,6 +528,7 @@ void PrintArgs(Parameters *P)
       }
 
   fprintf(stderr, "Gamma .............................. %.2lf\n", P->gamma);
+  fprintf(stderr, "Maximum Collisions ................. %u\n", P->col);
   if(P->ref != NULL)
     fprintf(stderr, "Reference filename ................. %s\n", P->ref);
   fprintf(stderr, "Target files (%u):\n", P->nTar);

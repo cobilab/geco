@@ -23,6 +23,7 @@ void        FillLogTable     (uint32_t, uint32_t, uint32_t);
 double      SearchLog        (uint32_t );
 double      Power            (double, double);
 uint32_t    FLog2            (uint64_t );
+char        *ReplaceSubStr   (char *, char *, char *);
 uint8_t     DNASymToNum      (uint8_t  );
 uint8_t     NumToDNASym      (uint8_t  );
 uint8_t     GetCompNum       (uint8_t  );
@@ -33,7 +34,8 @@ uint64_t    FopenBytesInFile (const char *);
 uint8_t     *ReverseStr      (uint8_t *, uint32_t);
 char        *CloneString     (char *   );
 char        *RepString       (const char *, const char *, const char *);
-uint32_t    ArgsNumber       (uint32_t , char *[], uint32_t, char *);
+uint32_t    ArgsNum          (uint32_t , char *[], uint32_t, char *, uint32_t,
+                              uint32_t);
 ModelPar    ArgsUniqModel    (char *, uint8_t);
 ModelPar    ArgsModel        (uint32_t , char *[], uint32_t, char *);
 double      ArgsDouble       (double, char *[], uint32_t, char *);
