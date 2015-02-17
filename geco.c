@@ -38,11 +38,20 @@ refNModels, INF *I){
   FILE        *Writter = Fopen(name, "w");
   uint32_t    n, k, idxPos;
   int32_t     idx = 0;
+  uint64_t    compressed = 0;
   double       *cModelWeight, cModelTotalWeight = 0, mA, mC, mG, mT;
   uint8_t     *readerBuffer, *symbolBuffer, sym, irSym, *pos, extra = 0;
   PModel      **pModel, *MX;
   #ifdef PROGRESS
   uint64_t    i = 0;
+  #endif
+  #ifdef ESTIMATE
+  char *IAEName = NULL;
+  FILE *IAE = NULL;
+  if(P->estim == 1){
+    IAEName = concatenate(P->tar[id], ".iae");
+    IAE = Fopen(IAEName, "w");
+    }
   #endif
 
   if(P->verbose)
@@ -115,10 +124,46 @@ refNModels, INF *I){
     WriteNBits(P->model[n].type,        1, Writter);
     }
 
+  #ifdef ESTIMATE
+  uint8_t type = 0, header = 1, line = 0, dna = 0;
+  if(P->estim == 1){
+    sym = fgetc(Reader);
+    switch(sym){
+      case '>': type = 1; break;
+      case '@': type = 2; break;
+      default : type = 0;
+      }
+    rewind(Reader);
+    }
+  #endif
+
   while((k = fread(readerBuffer, 1, BUFFER_SIZE, Reader)))
     for(idxPos = 0 ; idxPos < k ; ++idxPos){
       #ifdef PROGRESS
       CalcProgress(nSymbols, ++i);
+      #endif
+
+      #ifdef ESTIMATE
+      if(P->estim == 1){
+        sym = readerBuffer[idxPos];
+        if(type == 1){  // IF IS A FASTA FILE
+          if(sym == '>'){ header = 1; continue; }
+          if(sym == '\n' && header == 1){ header = 0; continue; }
+          if(sym == '\n') continue;
+          if(sym == 'N' ) continue;
+          if(header == 1) continue;
+          }
+        else if(type == 2){ // IF IS A FASTQ FILE
+          switch(line){
+            case 0: if(sym == '\n'){ line = 1; dna = 1; } break;
+            case 1: if(sym == '\n'){ line = 2; dna = 0; } break;
+            case 2: if(sym == '\n'){ line = 3; dna = 0; } break;
+            case 3: if(sym == '\n'){ line = 0; dna = 0; } break;
+            }
+          if(dna == 0 || sym == '\n') continue;
+          if(dna == 1 && sym == 'N' ) continue;
+          }
+        }
       #endif
 
       #ifndef EXTRA
@@ -152,7 +197,7 @@ refNModels, INF *I){
       
       #ifdef ESTIMATE
       if(P->estim == 1)
-        fprintf(stdout, "%.3g\n", PModelSymbolNats(MX, sym));
+        fprintf(IAE, "%.3g\n", PModelSymbolNats(MX, sym));
       #endif
 
       cModelTotalWeight = 0;
@@ -204,6 +249,8 @@ refNModels, INF *I){
         memcpy(symbolBuffer-BGUARD, symbolBuffer+idx-BGUARD, BGUARD);
         idx = 0;
         }
+
+      ++compressed;
       }
 
   finish_encode(Writter);
@@ -220,6 +267,13 @@ refNModels, INF *I){
   FreeGFCM(NMod);
   RemoveCBuffer(LBuf);
   FreeGFCM(LMod);
+  #endif
+
+  #ifdef ESTIMATE
+  if(P->estim == 1){
+    fclose(IAE);
+    Free(IAEName);
+    }
   #endif
 
   Free(MX);
@@ -243,7 +297,7 @@ refNModels, INF *I){
     fprintf(stderr, "Done!                          \n");  // SPACES ARE VALID 
 
   I[id].bytes = _bytes_output;
-  I[id].size  = nSymbols;
+  I[id].size  = compressed;
   }
 
 
@@ -334,25 +388,52 @@ int32_t main(int argc, char *argv[])
 
   P = (Parameters *) Malloc(1 * sizeof(Parameters));
   if((P->help = ArgsState(DEFAULT_HELP, p, argc, "-h")) == 1 || argc < 2){
-    fprintf(stderr, "                                                     \n");
-    fprintf(stderr, "Usage: GeCo [OPTIONS]... -r [FILE]  [FILE]:[...]     \n");
-    fprintf(stderr, "                                                     \n");
-    fprintf(stderr, "  -v                       verbose mode,             \n");
-    fprintf(stderr, "  -f                       force (be sure!),         \n");
-    fprintf(stderr, "  -rm <ctx>:<den>:<ir>     reference context model,  \n");
-    fprintf(stderr, "  -rm <ctx>:<den>:<ir>     reference context model,  \n");
-    fprintf(stderr, "  ...                                                \n");
-    fprintf(stderr, "  -tm <ctx>:<den>:<ir>     target context model,     \n");
-    fprintf(stderr, "  -tm <ctx>:<den>:<ir>     target context model,     \n");
-    fprintf(stderr, "  ...                                                \n");
-    fprintf(stderr, "  -g  <gamma>              gamma factor,             \n");
-    fprintf(stderr, "  -c  <collisions>         maximum hash collisions,  \n");
+    fprintf(stderr,
+    "Usage: GeCo [OPTION]... -r [FILE]  [FILE]:[...]                    \n"
+    "Compress and analyze a genomic sequence (by default, compress).    \n"
+    "                                                                   \n"
+    "Non-mandatory arguments:                                           \n"
+    "                                                                   \n"
+    "  -h                    give this help,                            \n"
+    "  -v                    verbose mode (more information),           \n"
+    "  -V                    display version number,                    \n"
+    "  -f                    force overwrite of output,                 \n"
+    "  -g <gamma>            mixture decayment forgetting factor. It is \n"
+    "                        a real value in the interval [0;1),        \n"
+    "  -c <cache>            maximum collisions for hash cache. Memory  \n"
+    "                        values are higly dependent of the parameter\n"
+    "                        specification,                             \n"
     #ifdef ESTIMATE
-    fprintf(stderr, "  -e                       estimate only,            \n");
+    "  -e                    analysis mode. It creates a file with the  \n"
+    "                        extension \".iae\" with the respective     \n"
+    "                        information content. If the file is FASTA  \n"
+    "                        or FASTQ it will only use the \"ACGT\" data,\n"
     #endif
-    fprintf(stderr, "  -r  <rFile>              reference file,           \n");
-    fprintf(stderr, "                                                     \n");
-    fprintf(stderr, "  <tFile1>:<tFile2>:<...>  target file(s).         \n\n");
+    "  -r <FILE>             reference file (\"-rm\" are loaded here),  \n"
+    "                                                                   \n"
+    "Mandatory arguments:                                               \n"
+    "                                                                   \n"
+    "  -rm <ctx>:<den>:<ir>  reference context model (ex:-rm 13:100:0), \n"
+    "  -rm <ctx>:<den>:<ir>  reference context model (ex:-rm 18:1000:0),\n"
+    "  ...                                                              \n"
+    "  -tm <ctx>:<den>:<ir>  target context model (ex:-tm 4:1:0),       \n"
+    "  -tm <ctx>:<den>:<ir>  target context model (ex:-tm 18:20:1),     \n"
+    "  ...                                                              \n"
+    "                                                                   \n"
+    "  <FILE>                file to compress (last argument). For more \n"
+    "                        files use splitting \":\" characters.        \n"
+    "                                                                   \n"
+    "Report bugs to <{pratas,ap,pjf}@ua.pt>.                            \n");
+    return EXIT_SUCCESS;
+    }
+
+  if(ArgsState(DEF_VERSION, p, argc, "-V")){
+    fprintf(stderr, "GeCo %u.%u\n"
+    "Copyright (C) 2015 University of Aveiro.\nThis is Free software. \nYou "
+    "may redistribute copies of it under the terms of the GNU General \n"
+    "Public License v2 <http://www.gnu.org/licenses/gpl.html>.\nThere is NO "
+    "WARRANTY, to the extent permitted by law.\nWritten by Diogo Pratas, "
+    "Armando J. Pinho and Paulo J. S. G. Ferreira.\n", VERSION, RELEASE);
     return EXIT_SUCCESS;
     }
 

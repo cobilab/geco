@@ -13,7 +13,7 @@
 #define PROGRESS
 #define EXTRA
 #define FSEARCHMODE
-//#define PREC32B // UNCOMMENT: CONTEXTS UP TO 28 (WILL USE MORE MEMORY!)
+//#define PREC32B // UNCOMMENT: CONTEXTS UP TO 28 (IT WILL USE MORE MEMORY!)
 //#define SWAP
 
 typedef uint64_t ULL;
@@ -57,8 +57,14 @@ U32 garbage;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+#define RELEASE                1
+#define VERSION                2
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 #define BUFFER_SIZE            65535      
 #define PROGRESS_MIN           1000000
+#define DEF_VERSION            0
 #define DEFAULT_HELP           0
 #define DEFAULT_VERBOSE        0
 #define DEFAULT_FORCE          0
