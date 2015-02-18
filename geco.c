@@ -8,76 +8,55 @@
 #include "mem.h"
 #include "defs.h"
 #include "buffer.h"
-#include "alpha.h"
 #include "common.h"
 #include "context.h"
-#include "gfcm.h"
 #include "bitio.h"
 #include "arith.h"
 #include "arith_aux.h"
-
-//////////////////////////////////////////////////////////////////////////////
-// - - - - - - - - - C O M P R E S S   R A W   S T R E A M - - - - - - - - - -
-
-void CompressStream(FILE *F, GFCM *M, CBUF *B, uint8_t sym, uint8_t nSym){
-  B->buf[B->idx] = sym;
-  GetIdx(B->buf+B->idx-1, M);
-  ComputeGFCM(M);
-  AESym(sym, (int *) M->freqs, (int) M->freqs[nSym], F);
-  UpdateGFCM(M, sym);
-  UpdateCBuffer(B);
-  }
 
 //////////////////////////////////////////////////////////////////////////////
 // - - - - - - - - - - - - - - C O M P R E S S O R - - - - - - - - - - - - - -
 
 void Compress(Parameters *P, CModel **cModels, uint8_t id, uint32_t 
 refNModels, INF *I){
-  FILE        *Reader  = Fopen(P->tar[id], "r");
-  char        *name    = concatenate(P->tar[id], ".co");
+  FILE        *Reader  = Fopen(P->tar[id], "r"), *IAE = NULL;
+  char        *name    = concatenate(P->tar[id], ".co"), *IAEName = NULL;
   FILE        *Writter = Fopen(name, "w");
   uint32_t    n, k, idxPos;
   int32_t     idx = 0;
-  uint64_t    compressed = 0;
+  uint64_t    compressed = 0, nSymbols = 0, nBases = 0;
   double       *cModelWeight, cModelTotalWeight = 0, mA, mC, mG, mT;
-  uint8_t     *readerBuffer, *symbolBuffer, sym, irSym, *pos, extra = 0;
+  uint8_t     *readerBuffer, *symbolBuffer, sym, irSym, *pos, type = 0, 
+              header = 1, line = 0, dna = 0;
   PModel      **pModel, *MX;
   #ifdef PROGRESS
   uint64_t    i = 0;
   #endif
-  #ifdef ESTIMATE
-  char *IAEName = NULL;
-  FILE *IAE = NULL;
+
+  if(P->verbose)
+    fprintf(stderr, "Analyzing data and creating models ...\n");
+
   if(P->estim == 1){
     IAEName = concatenate(P->tar[id], ".iae");
     IAE = Fopen(IAEName, "w");
     }
-  #endif
+  
+  sym = fgetc(Reader);
+  switch(sym){
+    case '>': type = 1; break;
+    case '@': type = 2; break;
+    default : type = 0;
+    }
+  rewind(Reader);
 
-  if(P->verbose)
-    fprintf(stderr, "Analyzing data, creating alphabet and models ...\n");
+  switch(type){
+    case 1:  nBases = NDNASymInFasta(Reader); break;
+    case 2:  nBases = NDNASymInFastq(Reader); break;
+    default: nBases = NDNASyminFile (Reader); break;
+    }
  
   _bytes_output = 0;
-
-  #ifdef EXTRA
-  uint8_t ss;
-  extra = 1;
-  Alpha *A = CreateAlphabet();
-  LoadAlphabet(Reader, A);
-  uint64_t nSymbols = A->length;
-  GFCM *EMod = CreateGFCM(EXTRA_MOD_CTX, EXTRA_MOD_DEN, A->nSym);
-  GFCM *BMod = CreateGFCM(EXTRA_BIN_CTX, EXTRA_BIN_DEN, 2);
-  GFCM *NMod = CreateGFCM(EXTRA_N_CTX,   EXTRA_N_DEN,   2);
-  GFCM *LMod = CreateGFCM(EXTRA_L_CTX,   EXTRA_L_DEN,   2);
-  CBUF *EBuf = CreateCBuffer(DEF_BUF_SIZE, DEF_BUF_GUARD);
-  CBUF *BBuf = CreateCBuffer(DEF_BUF_SIZE, DEF_BUF_GUARD);
-  CBUF *NBuf = CreateCBuffer(DEF_BUF_SIZE, DEF_BUF_GUARD);
-  CBUF *LBuf = CreateCBuffer(DEF_BUF_SIZE, DEF_BUF_GUARD);  
-  #else
-  extra = 0;
-  uint64_t nSymbols = NDNASyminFile(Reader);
-  #endif
-
+  nSymbols      = NBytesInFile(Reader);
   pModel        = (PModel  **) Calloc(P->nModels, sizeof(PModel *));
   for(n = 0 ; n < P->nModels ; ++n)
     pModel[n]   = CreatePModel(ALPHABET_SIZE);
@@ -96,8 +75,8 @@ refNModels, INF *I){
 
   if(P->verbose){
     fprintf(stderr, "Done!\n");
-    fprintf(stderr, "Compressing target sequence %d [length: %"PRIu64"] ...\n", 
-    id + 1, nSymbols);
+    fprintf(stderr, "Compressing target sequence %d [bases: %"PRIu64"] ...\n", 
+    id + 1, nBases);
     }
 
   startoutputtingbits();
@@ -105,17 +84,9 @@ refNModels, INF *I){
 
   WriteNBits(WATERMARK,                32, Writter);
   WriteNBits(P->checksum,              46, Writter);
-  WriteNBits(nSymbols,                 46, Writter);
+  WriteNBits(nBases,                   46, Writter);
   WriteNBits((int) (P->gamma * 65536), 32, Writter);
   WriteNBits(P->col,                   32, Writter);
-  WriteNBits(extra,                     1, Writter);
-  #ifdef EXTRA
-  WriteNBits(A->Ns,                     1, Writter);
-  WriteNBits(A->NL,                     1, Writter);
-  WriteNBits((int) A->lowBase,          8, Writter);
-  for(n = 0 ; n < MAX_ALPHA ; ++n)
-    WriteNBits(A->bin[n],               8, Writter);
-  #endif
   WriteNBits(P->nModels,               16, Writter);
   for(n = 0 ; n < P->nModels ; ++n){
     WriteNBits(cModels[n]->ctx,        16, Writter);
@@ -124,67 +95,42 @@ refNModels, INF *I){
     WriteNBits(P->model[n].type,        1, Writter);
     }
 
-  #ifdef ESTIMATE
-  uint8_t type = 0, header = 1, line = 0, dna = 0;
-  if(P->estim == 1){
-    sym = fgetc(Reader);
-    switch(sym){
-      case '>': type = 1; break;
-      case '@': type = 2; break;
-      default : type = 0;
-      }
-    rewind(Reader);
-    }
-  #endif
-
   while((k = fread(readerBuffer, 1, BUFFER_SIZE, Reader)))
     for(idxPos = 0 ; idxPos < k ; ++idxPos){
       #ifdef PROGRESS
       CalcProgress(nSymbols, ++i);
       #endif
 
-      #ifdef ESTIMATE
-      if(P->estim == 1){
-        sym = readerBuffer[idxPos];
-        if(type == 1){  // IS A FAST[A] FILE
-          if(sym == '>'){ header = 1; continue; }
-          if(sym == '\n' && header == 1){ header = 0; continue; }
-          if(sym == '\n') continue;
-          if(sym == 'N' ) continue;
-          if(header == 1) continue;
-          }
-        else if(type == 2){ // IS A FAST[Q] FILE
-          switch(line){
-            case 0: if(sym == '\n'){ line = 1; dna = 1; } break;
-            case 1: if(sym == '\n'){ line = 2; dna = 0; } break;
-            case 2: if(sym == '\n'){ line = 3; dna = 0; } break;
-            case 3: if(sym == '\n'){ line = 0; dna = 0; } break;
-            }
-          if(dna == 0 || sym == '\n') continue;
-          if(dna == 1 && sym == 'N' ) continue;
-          }
-        if(sym == 'U') // FORCE CONVERSION OF URACILA TO THYMINE
-          sym = 'T';
-        if(sym != 'A' && sym != 'C' && sym != 'G' && sym != 'T')
-          continue;
+      sym = readerBuffer[idxPos];
+      if(type == 1){  // IS A FAST[A] FILE
+        if(sym == '>'){ header = 1; continue; }
+        if(sym == '\n' && header == 1){ header = 0; continue; }
+        if(sym == '\n') continue;
+        if(sym == 'N' ) continue;
+        if(header == 1) continue;
         }
-      #endif
+      else if(type == 2){ // IS A FAST[Q] FILE
+        switch(line){
+          case 0: if(sym == '\n'){ line = 1; dna = 1; } break;
+          case 1: if(sym == '\n'){ line = 2; dna = 0; } break;
+          case 2: if(sym == '\n'){ line = 3; dna = 0; } break;
+          case 3: if(sym == '\n'){ line = 0; dna = 0; } break;
+          }
+        if(dna == 0 || sym == '\n') continue;
+        if(dna == 1 && sym == 'N' ) continue;
+        }
 
-      #ifndef EXTRA
-      if((sym = DNASymToNum(readerBuffer[idxPos])) == 4){
+      // FINAL FILTERING DNA CONTENT
+      if(sym != 'A' && sym != 'C' && sym != 'G' && sym != 'T')
         continue;
-        }
-      symbolBuffer[idx] = sym;
-      #else
-      symbolBuffer[idx] = sym = S2NAlpha(ss = readerBuffer[idxPos], A);
-      #endif
+
+      symbolBuffer[idx] = sym = DNASymToNum(sym);
       mA = mC = mG = mT = 0;
 
       pos = &symbolBuffer[idx-1];
       for(n = 0 ; n < P->nModels ; ++n){
         GetPModelIdx(pos, cModels[n]);
         ComputePModel(cModels[n], pModel[n]);
-
         double factor = cModelWeight[n] / pModel[n]->sum;
         mA += (double) pModel[n]->freqs[0] * factor;
         mC += (double) pModel[n]->freqs[1] * factor;
@@ -223,32 +169,6 @@ refNModels, INF *I){
       for(n = 0 ; n < P->nModels ; ++n) // RENORMALIZE THE WEIGHTS
         cModelWeight[n] /= cModelTotalWeight;
 
-      #ifdef EXTRA
-      if(sym == A->lowBase){
-        if(ss != 'A' && ss != 'C' && ss != 'G' && ss != 'T'){
-          // A POSSIBILITY IS TO USE GOLOMB CODES HERE!
-          // https://github.com/anirudhvr/golomb-coding/blob/master/encode.c
-          CompressStream(Writter, BMod, BBuf, 1, 2);   //EXTRA EXISTS!
-          switch(ss){                  // EVALUATE EXTRA SYMBOLIC SYMBOL
-            case 'N':
-            CompressStream(Writter, NMod, NBuf, 1, 2);
-            break;
-            case '\n':
-            CompressStream(Writter, NMod, NBuf, 0, 2); // NOT 'N'
-            CompressStream(Writter, LMod, LBuf, 1, 2); // FOUND '\n'
-            break;
-            default:
-            CompressStream(Writter, NMod, NBuf, 0, 2); // NOT 'N'
-            CompressStream(Writter, LMod, LBuf, 0, 2); // NOT '\n'
-            CompressStream(Writter, EMod, EBuf, A->numeric[ss], EMod->nSym);
-            // COMPRESS THE REMAINING EXTRA SYMBOLS
-            }
-          }
-        else
-          CompressStream(Writter, BMod, BBuf, 0, 2); // NOT FOUND EXTRA
-        }
-      #endif
-
       if(++idx == BUFFER_SIZE){
         memcpy(symbolBuffer-BGUARD, symbolBuffer+idx-BGUARD, BGUARD);
         idx = 0;
@@ -260,18 +180,6 @@ refNModels, INF *I){
   finish_encode(Writter);
   doneoutputtingbits(Writter);
   fclose(Writter);
-
-  #ifdef EXTRA
-  FreeAlphabet(A);
-  RemoveCBuffer(EBuf);
-  RemoveCBuffer(BBuf);
-  FreeGFCM(EMod);
-  FreeGFCM(BMod);
-  RemoveCBuffer(NBuf);
-  FreeGFCM(NMod);
-  RemoveCBuffer(LBuf);
-  FreeGFCM(LMod);
-  #endif
 
   #ifdef ESTIMATE
   if(P->estim == 1){
@@ -312,11 +220,13 @@ CModel **LoadReference(Parameters *P)
   {
   FILE      *Reader = Fopen(P->ref, "r");
   uint32_t  n, k, idxPos;
+  uint64_t  nBases = 0;
   int32_t   idx = 0;
-  uint8_t   *readerBuffer, *symbolBuffer, sym, irSym;
+  uint8_t   *readerBuffer, *symbolBuffer, sym, irSym, type = 0, header = 1, 
+            line = 0, dna = 0;
   CModel    **cModels;
   #ifdef PROGRESS
-  uint64_t  i = 0, size = NBytesInFile(Reader);
+  uint64_t  i = 0;
   #endif
 
   if(P->verbose == 1)
@@ -331,34 +241,66 @@ CModel **LoadReference(Parameters *P)
       cModels[n] = CreateCModel(P->model[n].ctx, P->model[n].den, 
       P->model[n].ir, REFERENCE, P->col);
 
-  P->checksum   = 0;
+  sym = fgetc(Reader);
+  switch(sym){ 
+    case '>': type = 1; break;
+    case '@': type = 2; break;
+    default : type = 0;
+    }
+  rewind(Reader);
+
+  switch(type){
+    case 1:  nBases = NDNASymInFasta(Reader); break;
+    case 2:  nBases = NDNASymInFastq(Reader); break;
+    default: nBases = NDNASyminFile (Reader); break;
+    }
+
+  P->checksum = 0;
   while((k = fread(readerBuffer, 1, BUFFER_SIZE, Reader)))
-    for(idxPos = 0 ; idxPos < k ; ++idxPos)
-      {
-      sym = DNASymToNum(readerBuffer[idxPos]);
-      if(sym == 4) continue;
-      symbolBuffer[idx] = sym;
+    for(idxPos = 0 ; idxPos < k ; ++idxPos){
+
+      sym = readerBuffer[idxPos];
+      if(type == 1){  // IS A FAST[A] FILE
+        if(sym == '>'){ header = 1; continue; }
+        if(sym == '\n' && header == 1){ header = 0; continue; }
+        if(sym == '\n') continue;
+        if(sym == 'N' ) continue;
+        if(header == 1) continue;
+        }
+      else if(type == 2){ // IS A FAST[Q] FILE
+        switch(line){
+          case 0: if(sym == '\n'){ line = 1; dna = 1; } break;
+          case 1: if(sym == '\n'){ line = 2; dna = 0; } break;
+          case 2: if(sym == '\n'){ line = 3; dna = 0; } break;
+          case 3: if(sym == '\n'){ line = 0; dna = 0; } break;
+          }
+        if(dna == 0 || sym == '\n') continue;
+        if(dna == 1 && sym == 'N' ) continue;
+        }
+
+      // FINAL FILTERING DNA CONTENT
+      if(sym != 'A' && sym != 'C' && sym != 'G' && sym != 'T')
+        continue;
+
+      symbolBuffer[idx] = sym = DNASymToNum(sym);
       P->checksum = (P->checksum + (uint8_t) sym);
 
       for(n = 0 ; n < P->nModels ; ++n)
-        if(P->model[n].type == REFERENCE)
-          {
+        if(P->model[n].type == REFERENCE){
           GetPModelIdx(symbolBuffer+idx-1, cModels[n]);
           UpdateCModelCounter(cModels[n], sym);
-          if(cModels[n]->ir == 1)                          // Inverted repeats
-            {
+          if(cModels[n]->ir == 1){                         // Inverted repeats
             irSym = GetPModelIdxIR(symbolBuffer+idx, cModels[n]);
             UpdateCModelCounterIr(cModels[n], irSym);
             }
           }
 
-      if(++idx == BUFFER_SIZE)
-        {
+      if(++idx == BUFFER_SIZE){
         memcpy(symbolBuffer - BGUARD, symbolBuffer + idx - BGUARD, BGUARD);
         idx = 0;
         }
       #ifdef PROGRESS
-      CalcProgress(size, ++i);
+      CalcProgress(nBases, ++i);
       #endif
       }
  
@@ -381,8 +323,7 @@ CModel **LoadReference(Parameters *P)
 // - - - - - - - - - - - - - - - - - M A I N - - - - - - - - - - - - - - - - -
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-int32_t main(int argc, char *argv[])
-  {
+int32_t main(int argc, char *argv[]){
   char        **p = *&argv;
   CModel      **refModels;
   uint32_t    n, k, refNModels;
@@ -408,10 +349,10 @@ int32_t main(int argc, char *argv[])
     "                        values are higly dependent of the parameter\n"
     "                        specification,                             \n"
     #ifdef ESTIMATE
-    "  -e                    analysis mode. It creates a file with the  \n"
-    "                        extension \".iae\" with the respective     \n"
-    "                        information content. If the file is FASTA  \n"
-    "                        or FASTQ it will only use the \"ACGT\" data,\n"
+    "  -e                    it creates a file with the extension \".iae\"\n" 
+    "                        with the respective information content. If\n" 
+    "                        the file is FASTA or FASTQ it will only use\n"
+    "                        the \"ACGT\" (genomic) data,               \n"
     #endif
     "  -r <FILE>             reference file (\"-rm\" are loaded here),  \n"
     "                                                                   \n"
@@ -425,7 +366,7 @@ int32_t main(int argc, char *argv[])
     "  ...                                                              \n"
     "                                                                   \n"
     "  <FILE>                file to compress (last argument). For more \n"
-    "                        files use splitting \":\" characters.        \n"
+    "                        files use splitting \":\" characters.      \n"
     "                                                                   \n"
     "Report bugs to <{pratas,ap,pjf}@ua.pt>.                            \n");
     return EXIT_SUCCESS;
@@ -444,7 +385,7 @@ int32_t main(int argc, char *argv[])
   P->verbose  = ArgsState  (DEFAULT_VERBOSE, p, argc, "-v" );
   P->force    = ArgsState  (DEFAULT_FORCE,   p, argc, "-f" );
   P->estim    = ArgsState  (0,               p, argc, "-e" );
-  P->col      = ArgsNum    (MAX_COLLISIONS,  p, argc, "-c", 1, 50000);
+  P->col      = ArgsNum    (MAX_COLLISIONS,  p, argc, "-c", 1, 10000);
 
   P->nModels  = 0;
   for(n = 1 ; n < argc ; ++n)

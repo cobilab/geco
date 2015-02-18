@@ -29,6 +29,8 @@ uint8_t     NumToDNASym      (uint8_t  );
 uint8_t     GetCompNum       (uint8_t  );
 uint8_t     GetCompSym       (uint8_t  );
 uint64_t    NDNASyminFile    (FILE *);
+uint64_t    NDNASymInFastq   (FILE *);
+uint64_t    NDNASymInFasta   (FILE *);
 uint64_t    NBytesInFile     (FILE *);
 uint64_t    FopenBytesInFile (const char *);
 uint8_t     *ReverseStr      (uint8_t *, uint32_t);

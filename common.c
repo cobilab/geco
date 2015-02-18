@@ -74,8 +74,7 @@ uint64_t NBytesInFile(FILE *file){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-uint64_t NDNASyminFile(FILE *file)
-  {
+uint64_t NDNASyminFile(FILE *file){
   uint8_t  buffer[BUFFER_SIZE];
   uint32_t k, idx;
   uint64_t nSymbols = 0;
@@ -88,6 +87,61 @@ uint64_t NDNASyminFile(FILE *file)
         case 'C': ++nSymbols; break;
         case 'G': ++nSymbols; break;
         }
+
+  rewind(file);
+  return nSymbols;
+  }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+uint64_t NDNASymInFasta(FILE *file){
+  uint8_t  buffer[BUFFER_SIZE], sym = 0, header = 1, line = 0, dna = 0;
+  uint32_t k, idx;
+  uint64_t nSymbols = 0;
+
+  while((k = fread(buffer, 1, BUFFER_SIZE, file)))
+    for(idx = 0 ; idx < k ; ++idx){
+      sym = buffer[idx];
+      if(sym == '>'){ header = 1; continue; }
+      if(sym == '\n' && header == 1){ header = 0; continue; }
+      if(sym == '\n') continue;
+      if(sym == 'N' ) continue;
+      if(header == 1) continue;
+      // FINAL FILTERING DNA CONTENT
+      if(sym != 'A' && sym != 'C' && sym != 'G' && sym != 'T')
+        continue;
+      ++nSymbols;
+      }
+
+  rewind(file);
+  return nSymbols;
+  }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+uint64_t NDNASymInFastq(FILE *file){
+  uint8_t  buffer[BUFFER_SIZE], sym = 0, line = 0, dna = 0;
+  uint32_t k, idx;
+  uint64_t nSymbols = 0;
+
+  while((k = fread(buffer, 1, BUFFER_SIZE, file)))
+    for(idx = 0 ; idx < k ; ++idx){
+      sym = buffer[idx];
+
+      switch(line){
+        case 0: if(sym == '\n'){ line = 1; dna = 1; } break;
+        case 1: if(sym == '\n'){ line = 2; dna = 0; } break;
+        case 2: if(sym == '\n'){ line = 3; dna = 0; } break;
+        case 3: if(sym == '\n'){ line = 0; dna = 0; } break;
+        }
+      if(dna == 0 || sym == '\n') continue;
+      if(dna == 1 && sym == 'N' ) continue;
+
+      // FINAL FILTERING DNA CONTENT
+      if(sym != 'A' && sym != 'C' && sym != 'G' && sym != 'T')
+        continue;
+      ++nSymbols;
+      }
 
   rewind(file);
   return nSymbols;

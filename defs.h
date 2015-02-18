@@ -11,7 +11,6 @@
 
 #define ESTIMATE
 #define PROGRESS
-#define EXTRA
 #define FSEARCHMODE
 //#define PREC32B // UNCOMMENT: CONTEXTS UP TO 28 (IT WILL USE MORE MEMORY!)
 //#define SWAP
@@ -26,8 +25,7 @@ typedef int32_t  I32;
 typedef int16_t  I16;
 typedef int8_t   I8;
 
-typedef struct
-  {
+typedef struct{
   U32 ctx;
   U32 den;
   U32 ir;

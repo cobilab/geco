@@ -124,33 +124,6 @@ GeDe/fast:
 	$(MAKE) -f CMakeFiles/GeDe.dir/build.make CMakeFiles/GeDe.dir/build
 .PHONY : GeDe/fast
 
-alpha.o: alpha.c.o
-.PHONY : alpha.o
-
-# target to build an object file
-alpha.c.o:
-	$(MAKE) -f CMakeFiles/GeCo.dir/build.make CMakeFiles/GeCo.dir/alpha.c.o
-	$(MAKE) -f CMakeFiles/GeDe.dir/build.make CMakeFiles/GeDe.dir/alpha.c.o
-.PHONY : alpha.c.o
-
-alpha.i: alpha.c.i
-.PHONY : alpha.i
-
-# target to preprocess a source file
-alpha.c.i:
-	$(MAKE) -f CMakeFiles/GeCo.dir/build.make CMakeFiles/GeCo.dir/alpha.c.i
-	$(MAKE) -f CMakeFiles/GeDe.dir/build.make CMakeFiles/GeDe.dir/alpha.c.i
-.PHONY : alpha.c.i
-
-alpha.s: alpha.c.s
-.PHONY : alpha.s
-
-# target to generate assembly for a file
-alpha.c.s:
-	$(MAKE) -f CMakeFiles/GeCo.dir/build.make CMakeFiles/GeCo.dir/alpha.c.s
-	$(MAKE) -f CMakeFiles/GeDe.dir/build.make CMakeFiles/GeDe.dir/alpha.c.s
-.PHONY : alpha.c.s
-
 arith.o: arith.c.o
 .PHONY : arith.o
 
@@ -361,33 +334,6 @@ gede.c.s:
 	$(MAKE) -f CMakeFiles/GeDe.dir/build.make CMakeFiles/GeDe.dir/gede.c.s
 .PHONY : gede.c.s
 
-gfcm.o: gfcm.c.o
-.PHONY : gfcm.o
-
-# target to build an object file
-gfcm.c.o:
-	$(MAKE) -f CMakeFiles/GeCo.dir/build.make CMakeFiles/GeCo.dir/gfcm.c.o
-	$(MAKE) -f CMakeFiles/GeDe.dir/build.make CMakeFiles/GeDe.dir/gfcm.c.o
-.PHONY : gfcm.c.o
-
-gfcm.i: gfcm.c.i
-.PHONY : gfcm.i
-
-# target to preprocess a source file
-gfcm.c.i:
-	$(MAKE) -f CMakeFiles/GeCo.dir/build.make CMakeFiles/GeCo.dir/gfcm.c.i
-	$(MAKE) -f CMakeFiles/GeDe.dir/build.make CMakeFiles/GeDe.dir/gfcm.c.i
-.PHONY : gfcm.c.i
-
-gfcm.s: gfcm.c.s
-.PHONY : gfcm.s
-
-# target to generate assembly for a file
-gfcm.c.s:
-	$(MAKE) -f CMakeFiles/GeCo.dir/build.make CMakeFiles/GeCo.dir/gfcm.c.s
-	$(MAKE) -f CMakeFiles/GeDe.dir/build.make CMakeFiles/GeDe.dir/gfcm.c.s
-.PHONY : gfcm.c.s
-
 mem.o: mem.c.o
 .PHONY : mem.o
 
@@ -425,9 +371,6 @@ help:
 	@echo "... GeDe"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... alpha.o"
-	@echo "... alpha.i"
-	@echo "... alpha.s"
 	@echo "... arith.o"
 	@echo "... arith.i"
 	@echo "... arith.s"
@@ -452,9 +395,6 @@ help:
 	@echo "... gede.o"
 	@echo "... gede.i"
 	@echo "... gede.s"
-	@echo "... gfcm.o"
-	@echo "... gfcm.i"
-	@echo "... gfcm.s"
 	@echo "... mem.o"
 	@echo "... mem.i"
 	@echo "... mem.s"

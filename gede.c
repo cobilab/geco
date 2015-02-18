@@ -8,26 +8,11 @@
 #include "mem.h"
 #include "defs.h"
 #include "buffer.h"
-#include "alpha.h"
 #include "common.h"
 #include "context.h"
-#include "gfcm.h"
 #include "bitio.h"
 #include "arith.h"
 #include "arith_aux.h"
-
-//////////////////////////////////////////////////////////////////////////////
-// - - - - - - - - D E C O M P R E S S   R A W   S T R E A M - - - - - - - - -
-
-uint8_t DecompressStream(FILE *F, GFCM *M, CBUF *B, uint8_t nSym){
-  UpdateCBuffer(B);
-  GetIdx(B->buf+B->idx-1, M);
-  ComputeGFCM(M);
-  B->buf[B->idx] = ArithDecodeSymbol(nSym, (int *) M->freqs, (int) 
-  M->freqs[nSym], F);
-  UpdateGFCM(M, B->buf[B->idx]);
-  return B->buf[B->idx];
-  }
 
 //////////////////////////////////////////////////////////////////////////////
 // - - - - - - - - - - - - - - D E C O M P R E S S O R - - - - - - - - - - - -
@@ -50,10 +35,6 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
     fprintf(stderr, "Decompressing %"PRIu64" symbols of target %d ...\n", 
     P[id].size, id + 1);
 
-  Alpha *A = CreateAlphabet();
-  GFCM  *ExtraMod = NULL, *BinMod = NULL, *NMod = NULL, *LMod = NULL;
-  CBUF  *ExtraBuf = NULL, *BinBuf = NULL, *NBuf = NULL, *LBuf = NULL;
-
   startinputtingbits();
   start_decode(Reader);
 
@@ -62,38 +43,12 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
   P[id].size             = ReadNBits(46, Reader);
   P[id].gamma            = ReadNBits(32, Reader) / 65536.0;
   P[id].col              = ReadNBits(32, Reader);
-  extra                  = ReadNBits( 1, Reader);
-  A->length = P[id].size;
-  if(extra == 1){
-    A->Ns                = ReadNBits( 1, Reader);
-    A->NL                = ReadNBits( 1, Reader);
-    A->lowBase           = ReadNBits( 8, Reader);
-    for(k = 0 ; k < MAX_ALPHA ; ++k)
-      A->bin[k]          = ReadNBits( 8, Reader);
-    }
   P[id].nModels          = ReadNBits(16, Reader);
   for(k = 0 ; k < P[id].nModels ; ++k){
     P[id].model[k].ctx   = ReadNBits(16, Reader);
     P[id].model[k].den   = ReadNBits(16, Reader);
     P[id].model[k].ir    = ReadNBits( 1, Reader);
     P[id].model[k].type  = ReadNBits( 1, Reader);
-    }
-
-  if(extra == 1){
-    BuildAlphabet(A);
-    PrintStreamInfo(A);
-    ExtraMod   = CreateGFCM(EXTRA_MOD_CTX, EXTRA_MOD_DEN, A->nSym);
-    ExtraBuf   = CreateCBuffer(DEF_BUF_SIZE, DEF_BUF_GUARD);
-    BinMod   = CreateGFCM(EXTRA_BIN_CTX, EXTRA_BIN_DEN, 2);
-    BinBuf   = CreateCBuffer(DEF_BUF_SIZE, DEF_BUF_GUARD);
-    if(A->Ns == 1){
-      NMod = CreateGFCM(EXTRA_N_CTX, EXTRA_N_DEN, 2);
-      NBuf = CreateCBuffer(DEF_BUF_SIZE, DEF_BUF_GUARD);
-      }
-    if(A->NL == 1){
-      LMod = CreateGFCM(EXTRA_L_CTX, EXTRA_L_DEN, 2);
-      LBuf = CreateCBuffer(DEF_BUF_SIZE, DEF_BUF_GUARD);
-      }
     }
 
   nSymbols      = P[id].size;
@@ -119,12 +74,10 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
     #endif
 
     mA = mC = mG = mT = 0;
-
     pos = &symbolBuffer[idx-1];
     for(n = 0 ; n < P[id].nModels ; ++n){
       GetPModelIdx(pos, cModels[n]);
       ComputePModel(cModels[n], pModel[n]);
-
       double factor = cModelWeight[n] / pModel[n]->sum;
       mA += (double) pModel[n]->freqs[0] * factor;
       mC += (double) pModel[n]->freqs[1] * factor;
@@ -145,9 +98,7 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
     for(n = 0 ; n < P[id].nModels ; ++n){
       cModelWeight[n] = Power(cModelWeight[n], P[id].gamma) * (double)
       pModel[n]->freqs[sym] / pModel[n]->sum;
-
       cModelTotalWeight += cModelWeight[n];
-
       if(P[id].model[n].type == TARGET){
         UpdateCModelCounter(cModels[n], sym);
         if(cModels[n]->ir == 1){                      // Inverted repeats
@@ -159,21 +110,6 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
 
     for(n = 0 ; n < P->nModels ; ++n) // RENORMALIZE THE WEIGHTS
       cModelWeight[n] /= cModelTotalWeight;
-
-    if(extra == 1 && sym == A->lowBase){
-      if(DecompressStream(Reader, BinMod, BinBuf, 2) == 1){
-        if(DecompressStream(Reader, NMod, NBuf, 2) == 1){
-          outBuffer[idxOut] = 'N';
-          }
-        else if(DecompressStream(Reader, LMod, LBuf, 2) == 1){
-          outBuffer[idxOut] = '\n';
-          }
-        else{
-          outBuffer[idxOut] = A->symbolic[DecompressStream(Reader, ExtraMod,
-          ExtraBuf, ExtraMod->nSym)];
-          }
-        }
-      }
 
     if(++idxOut == BUFFER_SIZE){
       fwrite(outBuffer, 1, idxOut, Writter);
@@ -193,22 +129,6 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
   doneinputtingbits();
 
   fclose(Writter);
-  if(extra == 1){
-    RemoveCBuffer(ExtraBuf);
-    RemoveCBuffer(BinBuf);
-    FreeGFCM(ExtraMod);
-    FreeGFCM(BinMod);
-    if(A->Ns == 1){
-      RemoveCBuffer(NBuf);
-      FreeGFCM(NMod);
-      }
-    if(A->NL == 1){
-      RemoveCBuffer(LBuf);
-      FreeGFCM(LMod);
-      }
-
-    }
-  FreeAlphabet(A);
   Free(MX);
   Free(name);
   Free(cModelWeight);
@@ -238,8 +158,10 @@ CModel **LoadReference(Parameters *P)
   {
   FILE      *Reader = Fopen(P->ref, "r");
   uint32_t  n, k, idxPos;
+  uint64_t  nBases = 0;
   int32_t   idx = 0;
-  uint8_t   *readerBuffer, *symbolBuffer, sym, irSym;
+  uint8_t   *readerBuffer, *symbolBuffer, sym, irSym, type = 0, header = 1,
+            line = 0, dna = 0;
   CModel    **cModels;
   #ifdef PROGRESS
   uint64_t  i = 0, size = NBytesInFile(Reader);
@@ -258,35 +180,66 @@ CModel **LoadReference(Parameters *P)
       cModels[n] = CreateCModel(P->model[n].ctx, P->model[n].den,
       P->model[n].ir, REFERENCE, P->col);
 
+  sym = fgetc(Reader);
+  switch(sym){
+    case '>': type = 1; break;
+    case '@': type = 2; break;
+    default : type = 0;
+    }
+  rewind(Reader);
+
+  switch(type){
+    case 1:  nBases = NDNASymInFasta(Reader); break;
+    case 2:  nBases = NDNASymInFastq(Reader); break;
+    default: nBases = NDNASyminFile (Reader); break;
+    }
+
   P->checksum   = 0;
   while((k = fread(readerBuffer, 1, BUFFER_SIZE, Reader)))
     for(idxPos = 0 ; idxPos < k ; ++idxPos)
       {
-      sym = DNASymToNum(readerBuffer[idxPos]);
-      if(sym == 4)
+      sym = readerBuffer[idxPos];
+      if(type == 1){  // IS A FAST[A] FILE
+        if(sym == '>'){ header = 1; continue; }
+        if(sym == '\n' && header == 1){ header = 0; continue; }
+        if(sym == '\n') continue;
+        if(sym == 'N' ) continue;
+        if(header == 1) continue;
+        }
+      else if(type == 2){ // IS A FAST[Q] FILE
+        switch(line){
+          case 0: if(sym == '\n'){ line = 1; dna = 1; } break;
+          case 1: if(sym == '\n'){ line = 2; dna = 0; } break;
+          case 2: if(sym == '\n'){ line = 3; dna = 0; } break;
+          case 3: if(sym == '\n'){ line = 0; dna = 0; } break;
+          }
+        if(dna == 0 || sym == '\n') continue;
+        if(dna == 1 && sym == 'N' ) continue;
+        }
+
+      // FINAL FILTERING DNA CONTENT
+      if(sym != 'A' && sym != 'C' && sym != 'G' && sym != 'T')
         continue;
-      symbolBuffer[idx] = sym;
+
+      symbolBuffer[idx] = sym = DNASymToNum(sym);      
       P->checksum = (P->checksum + (uint8_t) sym);
 
       for(n = 0 ; n < P->nModels ; ++n)
-        if(P->model[n].type == REFERENCE)
-          {
+        if(P->model[n].type == REFERENCE){
           GetPModelIdx(symbolBuffer+idx-1, cModels[n]);
           UpdateCModelCounter(cModels[n], sym);
-          if(cModels[n]->ir == 1)                          // Inverted repeats
-            {
+          if(cModels[n]->ir == 1){                        // Inverted repeats
             irSym = GetPModelIdxIR(symbolBuffer+idx, cModels[n]);
             UpdateCModelCounterIr(cModels[n], irSym);
             }
           }
 
-      if(++idx == BUFFER_SIZE)
-        {
+      if(++idx == BUFFER_SIZE){
         memcpy(symbolBuffer - BGUARD, symbolBuffer + idx - BGUARD, BGUARD);
         idx = 0;
         }
       #ifdef PROGRESS
-      CalcProgress(size, ++i);
+      CalcProgress(nBases, ++i);
       #endif
       }
  
@@ -309,8 +262,7 @@ CModel **LoadReference(Parameters *P)
 // - - - - - - - - - - - - - - - - - M A I N - - - - - - - - - - - - - - - - -
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-int32_t main(int argc, char *argv[])
-  {
+int32_t main(int argc, char *argv[]){
   char        **p = *&argv;
   CModel      **refModels; 
   uint32_t    n, k, *checksum, refNModels = 0;
@@ -318,17 +270,34 @@ int32_t main(int argc, char *argv[])
   FILE        *Reader = NULL;
   uint8_t     help, verbose, force, nTar = 1;
   
-  if((help = ArgsState(DEFAULT_HELP, p, argc, "-h")) == 1 || argc < 2)
-    {
-    fprintf(stderr, "                                                   \n");
-    fprintf(stderr, "Usage: GeDe [OPTIONS]... -r [FILE]  [FILE]:[...]   \n");
-    fprintf(stderr, "                                                   \n");
-    fprintf(stderr, " -v                       verbose mode             \n");
-    fprintf(stderr, " -f                       force (be sure!)         \n");
-    fprintf(stderr, "                                                   \n");
-    fprintf(stderr, " -r  <rFile>              reference file           \n");
-    fprintf(stderr, "                                                   \n");
-    fprintf(stderr, " <tFile1>:<tFile2>:<...>  target file(s)         \n\n");
+  if((help = ArgsState(DEFAULT_HELP, p, argc, "-h")) == 1 || argc < 2){
+    fprintf(stderr,
+    "Usage: GeDe [OPTION]... -r [FILE]  [FILE]:[...]                    \n"
+    "Decompress a genomic sequence compressed by GeCo.                  \n"
+    "                                                                   \n"
+    "Non-mandatory arguments:                                           \n"
+    "                                                                   \n"
+    "  -h                    give this help,                            \n"
+    "  -v                    verbose mode (more information),           \n"
+    "                                                                   \n"
+    "  -r <FILE>             reference file,                            \n"
+    "                                                                   \n"
+    "Mandatory arguments:                                               \n"
+    "                                                                   \n"
+    "  <FILE>                file to uncompress (last argument). For    \n"
+    "                        more files use splitting \":\" characters. \n"
+    "                                                                   \n"
+    "Report bugs to <{pratas,ap,pjf}@ua.pt>.                            \n");
+    return EXIT_SUCCESS;
+    }
+
+  if(ArgsState(DEF_VERSION, p, argc, "-V")){
+    fprintf(stderr, "GeDe from GeCo %u.%u\n"
+    "Copyright (C) 2015 University of Aveiro.\nThis is Free software. \nYou "
+    "may redistribute copies of it under the terms of the GNU General \n"
+    "Public License v2 <http://www.gnu.org/licenses/gpl.html>.\nThere is NO "
+    "WARRANTY, to the extent permitted by law.\nWritten by Diogo Pratas, "
+    "Armando J. Pinho and Paulo J. S. G. Ferreira.\n", VERSION, RELEASE);
     return EXIT_SUCCESS;
     }
 
@@ -346,16 +315,14 @@ int32_t main(int argc, char *argv[])
   P[0].verbose = verbose;
   P[0].nTar    = ReadFNames (P, argv[argc-1]);
   P[0].ref     = ArgsString (NULL, p, argc, "-r");
-  for(n = 0 ; n < nTar ; ++n)
-    {
+  for(n = 0 ; n < nTar ; ++n){
     Reader = Fopen(P[0].tar[n], "r");
     startinputtingbits();
     start_decode(Reader);
 
     refNModels = 0;
     P[n].watermark = ReadNBits(32, Reader);
-    if(P[n].watermark != WATERMARK)
-      {
+    if(P[n].watermark != WATERMARK){
       fprintf(stderr, "Error: Invalid compressed file to decompress!\n");
       return 1;
       }
@@ -363,17 +330,9 @@ int32_t main(int argc, char *argv[])
     P[n].size      = ReadNBits(46, Reader);
     P[n].gamma     = ReadNBits(32, Reader) / 65536.0;
     P[n].col       = ReadNBits(32, Reader);
-    if(ReadNBits(1, Reader) == 1){
-      garbage      = ReadNBits( 1, Reader);
-      garbage      = ReadNBits( 1, Reader);
-      garbage      = ReadNBits( 8, Reader);
-      for(k = 0 ; k < MAX_ALPHA ; ++k)
-        garbage    = ReadNBits( 8, Reader);
-      }
     P[n].nModels   = ReadNBits(16, Reader);
     P[n].model     = (ModelPar *) Calloc(P[n].nModels, sizeof(ModelPar));
-    for(k = 0 ; k < P[n].nModels ; ++k)
-      {
+    for(k = 0 ; k < P[n].nModels ; ++k){
       P[n].model[k].ctx  = ReadNBits(16, Reader); 
       P[n].model[k].den  = ReadNBits(16, Reader); 
       P[n].model[k].ir   = ReadNBits( 1, Reader); 
@@ -390,8 +349,7 @@ int32_t main(int argc, char *argv[])
   if(P->verbose)
     PrintArgs(P);
  
-  if(refNModels > 0 && P[0].ref == NULL)
-    {
+  if(refNModels > 0 && P[0].ref == NULL){
     fprintf(stderr, "Error: using reference model(s) in nonexistent "
     "reference sequence!\n");
     exit(1);
@@ -405,10 +363,8 @@ int32_t main(int argc, char *argv[])
   if(P->verbose && refNModels != 0)
     fprintf(stderr, "Checksum: %"PRIu64"\n", P->checksum); 
 
-  for(n = 0 ; n < nTar ; ++n)
-    {
-    if(refNModels != 0)
-      {
+  for(n = 0 ; n < nTar ; ++n){
+    if(refNModels != 0){
       if(CmpCheckSum(checksum[n], P[0].checksum) == 0)
         Decompress(P, refModels, n);
       }
