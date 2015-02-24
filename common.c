@@ -45,6 +45,13 @@ double Power(double a, double b)
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+void ShiftBuffer(uint8_t *buf, int size, uint8_t new){
+  memmove(buf, buf + 1, size * sizeof(uint8_t));
+  buf[size - 1] = new;
+  }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // REPLACE STRING
 //
 char *ReplaceSubStr(char *str, char *a, char *b){
@@ -382,24 +389,23 @@ char *ArgsString(char *def, char *arg[], uint32_t n, char *str)
 
 ModelPar ArgsUniqModel(char *str, uint8_t type)
   {
-  uint32_t  ctx, den, ir;
+  uint32_t  ctx, den, ir, am;
   ModelPar  Mp;
 
-  if(sscanf(str, "%u:%u:%u", &ctx, &den, &ir) == 3)
-    {
-    if(ctx > MAX_CTX || ctx < MIN_CTX || den > MAX_DEN || den < MIN_DEN)
-      {
+  if(sscanf(str, "%u:%u:%u:%u", &ctx, &den, &ir, &am) == 4){
+    if(ctx > MAX_CTX || ctx < MIN_CTX || den > MAX_DEN || den < MIN_DEN || am > 
+      256){
       fprintf(stderr, "Error: invalid model arguments range!\n");
       exit(1);
       }
     Mp.ctx  = ctx;
     Mp.den  = den;
     Mp.ir   = ir;
+    Mp.am   = am;
     Mp.type = type;
     return Mp;
     }
-  else
-    {
+  else{
     fprintf(stderr, "Error: unknown scheme for model arguments!\n");
     exit(1);
     }
@@ -409,28 +415,24 @@ ModelPar ArgsUniqModel(char *str, uint8_t type)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-ModelPar ArgsModel(uint32_t def, char *arg[], uint32_t n, char *str)
-  {
-  uint32_t  ctx, den, ir;
+ModelPar ArgsModel(uint32_t def, char *arg[], uint32_t n, char *str){
+  uint32_t  ctx, den, ir, am;
   ModelPar  Mp;
 
   for( ; --n ; )
-    if(!strcmp(str, arg[n]))
-      {
-      if(sscanf(arg[n+1], "%u:%u:%u", &ctx, &den, &ir) == 3)
-        {
-        if(ctx > MAX_CTX || ctx < MIN_CTX || den > MAX_DEN || den < MIN_DEN)
-          {
+    if(!strcmp(str, arg[n])){
+      if(sscanf(arg[n+1], "%u:%u:%u:%u", &ctx, &den, &ir, &am) == 4){
+        if(ctx > MAX_CTX || ctx < MIN_CTX || den > MAX_DEN || den < MIN_DEN){
           fprintf(stderr, "Error: invalid model arguments range!\n");
           exit(1);
           }
         Mp.ctx = ctx;
         Mp.den = den;
         Mp.ir  = ir;
+        Mp.am  = am;
         return Mp;
         }
-      else
-        {
+      else{
         fprintf(stderr, "Error: unknown scheme for model arguments!\n");
         exit(1);
         }
@@ -440,6 +442,7 @@ ModelPar ArgsModel(uint32_t def, char *arg[], uint32_t n, char *str)
   Mp.ctx = DEFAULT_CONTEXT  [def];
   Mp.den = DEFAULT_ALPHADEN [def];
   Mp.ir  = DEFAULT_IR       [def];
+  Mp.am  = DEFAULT_AM       [def];
   return Mp;
   }
 
@@ -567,6 +570,8 @@ void PrintArgs(Parameters *P)
       P->model[n].den);
       fprintf(stderr, "  [+] Inverted repeats ............. %s\n", 
       P->model[n].ir == 0 ? "no" : "yes");
+      fprintf(stderr, "  [+] Allowable substitutions ...... %u\n",
+      P->model[n].am);
     }
 
   for(n = 0 ; n < P->nModels ; ++n)
@@ -579,6 +584,8 @@ void PrintArgs(Parameters *P)
       P->model[n].den);
       fprintf(stderr, "  [+] Inverted repeats ............. %s\n",
       P->model[n].ir == 0 ? "no" : "yes");
+      fprintf(stderr, "  [+] Allowable substitutions ...... %u\n",
+      P->model[n].am);
       }
 
   fprintf(stderr, "Gamma .............................. %.2lf\n", P->gamma);

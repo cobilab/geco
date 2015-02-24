@@ -68,9 +68,10 @@ refNModels, INF *I){
 
   for(n = 0 ; n < P->nModels ; ++n){
     cModelWeight[n] = 1.0 / P->nModels;
-    if(P->model[n].type == TARGET)
+    if(P->model[n].type == TARGET){
       cModels[n] = CreateCModel(P->model[n].ctx, P->model[n].den, 
-      P->model[n].ir, TARGET, P->col);
+      P->model[n].ir, TARGET, P->col, P->model[n].am);
+      }
     }
 
   if(P->verbose){
@@ -92,6 +93,7 @@ refNModels, INF *I){
     WriteNBits(cModels[n]->ctx,        16, Writter);
     WriteNBits(cModels[n]->alphaDen,   16, Writter);
     WriteNBits(cModels[n]->ir,          1, Writter);
+    WriteNBits(cModels[n]->am,          8, Writter);
     WriteNBits(P->model[n].type,        1, Writter);
     }
 
@@ -129,7 +131,15 @@ refNModels, INF *I){
 
       pos = &symbolBuffer[idx-1];
       for(n = 0 ; n < P->nModels ; ++n){
-        GetPModelIdx(pos, cModels[n]);
+        if(cModels[n]->am == 0)
+          GetPModelIdx(pos, cModels[n]);
+        else{
+          cModels[n]->correct.seq->buf[cModels[n]->correct.seq->idx] = sym;
+          GetPModelIdx(cModels[n]->correct.seq->buf+cModels[n]->correct.seq->idx
+          -1, cModels[n]);
+          cModels[n]->correct.idx = GetPModelIdx2(pos, cModels[n], 
+          cModels[n]->correct.idx);
+          }
         ComputePModel(cModels[n], pModel[n]);
         double factor = cModelWeight[n] / pModel[n]->sum;
         mA += (double) pModel[n]->freqs[0] * factor;
@@ -144,7 +154,6 @@ refNModels, INF *I){
       MX->sum += MX->freqs[3] = 1 + (unsigned) (mT * MX_PMODEL);
 
       AESym(sym, (int *)(MX->freqs), (int) MX->sum, Writter);
-      
       #ifdef ESTIMATE
       if(P->estim == 1)
         fprintf(IAE, "%.3g\n", PModelSymbolNats(MX, sym));
@@ -152,13 +161,15 @@ refNModels, INF *I){
 
       cModelTotalWeight = 0;
       for(n = 0 ; n < P->nModels ; ++n){
-
         cModelWeight[n] = Power(cModelWeight[n], P->gamma) * (double) 
         pModel[n]->freqs[sym] / pModel[n]->sum;
         cModelTotalWeight += cModelWeight[n];
-        
         if(cModels[n]->ref == TARGET){
-          UpdateCModelCounter(cModels[n], sym);
+          if(cModels[n]->am != 0)
+            UpdateCModelCounter(cModels[n], sym, cModels[n]->correct.idx);
+          else
+            UpdateCModelCounter(cModels[n], sym, cModels[n]->pModelIdx);
+
           if(cModels[n]->ir == 1){                // REVERSE COMPLEMENTS
             irSym = GetPModelIdxIR(symbolBuffer+idx, cModels[n]);
             UpdateCModelCounterIr(cModels[n], irSym);
@@ -168,6 +179,38 @@ refNModels, INF *I){
 
       for(n = 0 ; n < P->nModels ; ++n) // RENORMALIZE THE WEIGHTS
         cModelWeight[n] /= cModelTotalWeight;
+
+      #ifdef CORRECT
+      for(n = 0 ; n < P->nModels ; ++n){
+        if(cModels[n]->am != 0){
+          int32_t best = BestId(pModel[n]->freqs, pModel[n]->sum);
+          switch(best){
+            case -2:  // IT IS A ZERO COUNTER [NOT SEEN BEFORE]
+              if(cModels[n]->correct.in == 1)
+                Fail(cModels[n], best);
+            break;
+            case -1:  // IT HAS AT LEAST TWO MAXIMUM FREQS [CONFUSION FREQS]
+              if(cModels[n]->correct.in == 1)
+                Fail(cModels[n], best);
+            break;
+            default:  // IT HAS ONE MAXIMUM FREQ
+              if(cModels[n]->correct.in == 0){ // IF IS OUT
+                cModels[n]->correct.in   = 1;
+                memset(cModels[n]->correct.mask, cModels[n]->ctx, 0);
+                }
+              else{ // IF IS IN
+                if(best == sym) Hit(cModels[n]);
+                else{
+                  Fail(cModels[n], best);
+                  cModels[n]->correct.seq->buf[cModels[n]->correct.seq->idx] 
+                  = best; // UPDATE BUFFER WITH NEW SYMBOL
+                  }
+                }           
+            }
+          UpdateCBuffer(cModels[n]->correct.seq);
+          }
+        }
+      #endif
 
       if(++idx == BUFFER_SIZE){
         memcpy(symbolBuffer-BGUARD, symbolBuffer+idx-BGUARD, BGUARD);
@@ -239,7 +282,7 @@ CModel **LoadReference(Parameters *P)
   for(n = 0 ; n < P->nModels ; ++n)
     if(P->model[n].type == REFERENCE)
       cModels[n] = CreateCModel(P->model[n].ctx, P->model[n].den, 
-      P->model[n].ir, REFERENCE, P->col);
+      P->model[n].ir, REFERENCE, P->col, P->model[n].am);
 
   sym = fgetc(Reader);
   switch(sym){ 
@@ -288,7 +331,7 @@ CModel **LoadReference(Parameters *P)
       for(n = 0 ; n < P->nModels ; ++n)
         if(P->model[n].type == REFERENCE){
           GetPModelIdx(symbolBuffer+idx-1, cModels[n]);
-          UpdateCModelCounter(cModels[n], sym);
+          UpdateCModelCounter(cModels[n], sym, cModels[n]->pModelIdx);
           if(cModels[n]->ir == 1){                         // Inverted repeats
             irSym = GetPModelIdxIR(symbolBuffer+idx, cModels[n]);
             UpdateCModelCounterIr(cModels[n], irSym);
@@ -358,12 +401,18 @@ int32_t main(int argc, char *argv[]){
     "                                                                   \n"
     "Mandatory arguments:                                               \n"
     "                                                                   \n"
-    "  -rm <ctx>:<den>:<ir>  reference context model (ex:-rm 13:100:0), \n"
-    "  -rm <ctx>:<den>:<ir>  reference context model (ex:-rm 18:1000:0),\n"
+    "  -rm <c>:<d>:<i>:<m>   reference context model (ex:-rm 13:100:0:0),\n"
+    "  -rm <c>:<d>:<i>:<m>   reference context model (ex:-rm 18:1000:0:1),\n"
     "  ...                                                              \n"
-    "  -tm <ctx>:<den>:<ir>  target context model (ex:-tm 4:1:0),       \n"
-    "  -tm <ctx>:<den>:<ir>  target context model (ex:-tm 18:20:1),     \n"
+    "  -tm <c>:<d>:<i>:<m>   target context model (ex:-tm 4:1:0:0),     \n"
+    "  -tm <c>:<d>:<i>:<m>   target context model (ex:-tm 18:20:1:1),   \n"
     "  ...                                                              \n"
+    "                        target and reference templates use <c> for \n"
+    "                        context-order size, <d> for alpha (1/<d>), \n"
+    "                        <i> (0 or 1) to set the usage of inverted  \n"
+    "                        repeats (1 to use) and <m> to the maximum  \n"
+    "                        allowed mutation on the context without    \n"
+    "                        being discarded (usefull in deep contexts),\n"
     "                                                                   \n"
     "  <FILE>                file to compress (last argument). For more \n"
     "                        files use splitting \":\" characters.      \n"

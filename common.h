@@ -15,10 +15,12 @@ INF;
 static const uint32_t    DEFAULT_CONTEXT[]  = { 2, 20, 2, 14 };
 static const uint32_t    DEFAULT_ALPHADEN[] = { 1, 50, 1, 10 };       
 static const uint32_t    DEFAULT_IR[]       = { 0,  1, 0,  1 };
+static const uint32_t    DEFAULT_AM[]       = { 0,  4, 0,  3 };
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 FILE        *Fopen           (const char *, const char *);
+void        ShiftBuffer      (uint8_t *, int, uint8_t);
 void        FillLogTable     (uint32_t, uint32_t, uint32_t);
 double      SearchLog        (uint32_t );
 double      Power            (double, double);

@@ -48,6 +48,7 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
     P[id].model[k].ctx   = ReadNBits(16, Reader);
     P[id].model[k].den   = ReadNBits(16, Reader);
     P[id].model[k].ir    = ReadNBits( 1, Reader);
+    P[id].model[k].am    = ReadNBits( 8, Reader);
     P[id].model[k].type  = ReadNBits( 1, Reader);
     }
 
@@ -65,7 +66,7 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
     cModelWeight[n] = 1.0 / P[id].nModels;
     if(P[id].model[n].type == TARGET)
       cModels[n] = CreateCModel(P[id].model[n].ctx , P[id].model[n].den, 
-      P[id].model[n].ir, TARGET, P[id].col);
+      P[id].model[n].ir, TARGET, P[id].col, P[id].model[n].am);
     }
 
   while(nSymbols--){
@@ -76,7 +77,14 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
     mA = mC = mG = mT = 0;
     pos = &symbolBuffer[idx-1];
     for(n = 0 ; n < P[id].nModels ; ++n){
-      GetPModelIdx(pos, cModels[n]);
+      if(cModels[n]->am == 0)
+        GetPModelIdx(pos, cModels[n]);
+      else{
+        GetPModelIdx(cModels[n]->correct.seq->buf+cModels[n]->correct.seq->idx
+        -1, cModels[n]);
+        cModels[n]->correct.idx = GetPModelIdx2(pos, cModels[n],
+        cModels[n]->correct.idx);
+        }
       ComputePModel(cModels[n], pModel[n]);
       double factor = cModelWeight[n] / pModel[n]->sum;
       mA += (double) pModel[n]->freqs[0] * factor;
@@ -94,13 +102,23 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
     MX->freqs, (int) MX->sum, Reader);
     outBuffer[idxOut] = NumToDNASym(sym);
 
+    for(n = 0 ; n < P[id].nModels ; ++n)
+      if(cModels[n]->am != 0)
+        cModels[n]->correct.seq->buf[cModels[n]->correct.seq->idx] = sym;
+
     cModelTotalWeight = 0;
     for(n = 0 ; n < P[id].nModels ; ++n){
       cModelWeight[n] = Power(cModelWeight[n], P[id].gamma) * (double)
       pModel[n]->freqs[sym] / pModel[n]->sum;
       cModelTotalWeight += cModelWeight[n];
       if(P[id].model[n].type == TARGET){
-        UpdateCModelCounter(cModels[n], sym);
+        if(cModels[n]->am != 0){
+          UpdateCModelCounter(cModels[n], sym, cModels[n]->correct.idx);
+          }
+        else{
+          UpdateCModelCounter(cModels[n], sym, cModels[n]->pModelIdx);
+          }
+        //UpdateCModelCounter(cModels[n], sym);
         if(cModels[n]->ir == 1){                      // Inverted repeats
           irSym = GetPModelIdxIR(symbolBuffer+idx, cModels[n]);
           UpdateCModelCounterIr(cModels[n], irSym);
@@ -110,6 +128,38 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
 
     for(n = 0 ; n < P->nModels ; ++n) // RENORMALIZE THE WEIGHTS
       cModelWeight[n] /= cModelTotalWeight;
+
+      #ifdef CORRECT
+      for(n = 0 ; n < P->nModels ; ++n){
+        if(cModels[n]->am != 0){
+          int32_t best = BestId(pModel[n]->freqs, pModel[n]->sum);
+          switch(best){
+            case -2:  // IT IS A ZERO COUNTER [NOT SEEN BEFORE]
+              if(cModels[n]->correct.in == 1)
+                Fail(cModels[n], best);
+            break;
+            case -1:  // IT HAS AT LEAST TWO MAXIMUM FREQS [CONFUSION FREQS]
+              if(cModels[n]->correct.in == 1)
+                Fail(cModels[n], best);
+            break;
+            default:  // IT HAS ONE MAXIMUM FREQ
+              if(cModels[n]->correct.in == 0){ // IF IS OUT
+                cModels[n]->correct.in   = 1;
+                memset(cModels[n]->correct.mask, cModels[n]->ctx, 0);
+                }
+              else{ // IF IS IN
+                if(best == sym) Hit(cModels[n]);
+                else{
+                  Fail(cModels[n], best);
+                  cModels[n]->correct.seq->buf[cModels[n]->correct.seq->idx]
+                  = best; // UPDATE BUFFER WITH NEW SYMBOL
+                  }
+                }
+            }
+          UpdateCBuffer(cModels[n]->correct.seq);
+          }
+        }
+      #endif
 
     if(++idxOut == BUFFER_SIZE){
       fwrite(outBuffer, 1, idxOut, Writter);
@@ -178,7 +228,7 @@ CModel **LoadReference(Parameters *P)
   for(n = 0 ; n < P->nModels ; ++n)
     if(P->model[n].type == REFERENCE)
       cModels[n] = CreateCModel(P->model[n].ctx, P->model[n].den,
-      P->model[n].ir, REFERENCE, P->col);
+      P->model[n].ir, REFERENCE, P->col, P->model[n].am);
 
   sym = fgetc(Reader);
   switch(sym){
@@ -227,7 +277,7 @@ CModel **LoadReference(Parameters *P)
       for(n = 0 ; n < P->nModels ; ++n)
         if(P->model[n].type == REFERENCE){
           GetPModelIdx(symbolBuffer+idx-1, cModels[n]);
-          UpdateCModelCounter(cModels[n], sym);
+          UpdateCModelCounter(cModels[n], sym, cModels[n]->pModelIdx);
           if(cModels[n]->ir == 1){                        // Inverted repeats
             irSym = GetPModelIdxIR(symbolBuffer+idx, cModels[n]);
             UpdateCModelCounterIr(cModels[n], irSym);
@@ -336,6 +386,7 @@ int32_t main(int argc, char *argv[]){
       P[n].model[k].ctx  = ReadNBits(16, Reader); 
       P[n].model[k].den  = ReadNBits(16, Reader); 
       P[n].model[k].ir   = ReadNBits( 1, Reader); 
+      P[n].model[k].am   = ReadNBits( 8, Reader); 
       P[n].model[k].type = ReadNBits( 1, Reader);
       if(P[n].model[k].type == 1)
         ++refNModels;

@@ -2,10 +2,7 @@
 #define CONTEXT_H_INCLUDED
 
 #include "defs.h"
-
-//#define PREC32B // UNCOMMENT: CONTEXTS UP TO 28 (WILL USE MORE MEMORY!)
-#define FSEARCHMODE
-//#define SWAP
+#include "buffer.h"
 
 #define ARRAY_MODE            0
 #define HASH_TABLE_MODE       1
@@ -42,10 +39,22 @@ typedef struct{
   }
 HashTable;
 
-typedef struct {
+typedef struct{
   ACC        *counters;
-  }
+}
 Array;
+
+#ifdef CORRECT
+typedef struct{
+  uint32_t in;
+  CBUF     *seq;  // BUFFER FOR EDITED SEQUENCE
+  uint8_t  *mask; // BUFFER FOR FAILS & HITS
+  uint64_t idx;   // AUXILIAR INDEX FOR UPDATE
+  uint32_t threshold;
+  uint32_t fails;
+  }
+Correct;
+#endif
 
 typedef struct{
   U32        ctx;                    // Current depth of context template
@@ -55,9 +64,13 @@ typedef struct{
   U64        multiplier;
   U64        pModelIdx;
   U64        pModelIdxIR;
-  U32        mode;
+  #ifdef CORRECT
+  Correct    correct;
+  #endif
   U8         ir;
   U8         ref;
+  U32        am;
+  U32        mode;
   HashTable  hTable;
   Array      array;
   }
@@ -76,18 +89,25 @@ FloatPModel;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void         FreeCModel            (CModel *);
-inline void  GetPModelIdx          (U8 *, CModel *);
-inline U8    GetPModelIdxIR        (U8 *, CModel *);
-PModel       *CreatePModel         (U32);
-FloatPModel  *CreateFloatPModel    (U32);
-void         ResetCModelIdx        (CModel *);
-void         UpdateCModelCounter   (CModel *, U32);
-void         UpdateCModelCounterIr (CModel *, U32);
-void         UpdateCModelCounterRM (CModel *, U32);
-CModel       *CreateCModel         (U32, U32, U32, U8, U32);
-void         ComputePModel         (CModel *, PModel *);
-double       PModelSymbolNats      (PModel *, U32);
+#ifdef CORRECT
+inline void     CorrectIdx            (CModel *, uint8_t);
+int32_t         BestId                (uint32_t *, uint32_t);
+void            Hit                   (CModel *);
+void            Fail                  (CModel *, uint8_t);
+#endif
+void            FreeCModel            (CModel *);
+inline void     GetPModelIdx          (U8 *, CModel *);
+inline uint64_t GetPModelIdx2         (U8 *, CModel *, uint64_t);
+inline U8       GetPModelIdxIR        (U8 *, CModel *);
+PModel          *CreatePModel         (U32);
+FloatPModel     *CreateFloatPModel    (U32);
+void            ResetCModelIdx        (CModel *);
+void            UpdateCModelCounter   (CModel *, U32, U64);
+void            UpdateCModelCounterIr (CModel *, U32);
+void            UpdateCModelCounterRM (CModel *, U32);
+CModel          *CreateCModel         (U32, U32, U32, U8, U32, U32);
+void            ComputePModel         (CModel *, PModel *);
+double          PModelSymbolNats      (PModel *, U32);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

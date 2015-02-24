@@ -9,6 +9,8 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // RUNNING OPTIMIZATIONS : MEMORY / SPEED
 
+#define CORRECT
+
 #define ESTIMATE
 #define PROGRESS
 #define FSEARCHMODE
@@ -29,6 +31,7 @@ typedef struct{
   U32 ctx;
   U32 den;
   U32 ir;
+  U32 am;
   U8  type;
   }
 ModelPar;

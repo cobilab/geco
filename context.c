@@ -188,7 +188,7 @@ void UpdateCModelCounterIr(CModel *M, U32 sym){
     }
   else{
     AC = &M->array.counters[idx << 2];
-    if(++AC[sym] == M->maxCount && M->maxCount != 0){
+    if(++AC[sym] == M->maxCount){
       AC[0] >>= 1;
       AC[1] >>= 1;
       AC[2] >>= 1;
@@ -199,10 +199,11 @@ void UpdateCModelCounterIr(CModel *M, U32 sym){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void UpdateCModelCounter(CModel *M, U32 sym){
+void UpdateCModelCounter(CModel *M, U32 sym, U64 im){
   U32 n;
   ACC *AC;
-  U64 idx = M->pModelIdx;
+  U64 idx = im;
+  //U64 idx = M->pModelIdx;
 
   if(M->mode == HASH_TABLE_MODE){
     U8   counter;
@@ -247,7 +248,7 @@ void UpdateCModelCounter(CModel *M, U32 sym){
     }
   else{
     AC = &M->array.counters[idx << 2];
-    if(++AC[sym] == M->maxCount && M->maxCount != 0){    
+    if(++AC[sym] == M->maxCount){    
       AC[0] >>= 1;
       AC[1] >>= 1;
       AC[2] >>= 1;
@@ -258,7 +259,7 @@ void UpdateCModelCounter(CModel *M, U32 sym){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-CModel *CreateCModel(U32 ctx, U32 aDen, U32 ir, U8 ref, U32 col){
+CModel *CreateCModel(U32 ctx, U32 aDen, U32 ir, U8 ref, U32 col, U32 am){
   CModel *M = (CModel *) Calloc(1, sizeof(CModel));
   U64    prod = 1, *mult;
   U32    n;
@@ -273,6 +274,7 @@ CModel *CreateCModel(U32 ctx, U32 aDen, U32 ir, U8 ref, U32 col){
   M->nPModels    = (U64) pow(ALPHABET_SIZE, ctx);
   M->ctx         = ctx;
   M->alphaDen    = aDen;
+  M->am          = am;
   M->pModelIdx   = 0;
   M->pModelIdxIR = M->nPModels - 1;
   M->ir          = ir  == 0 ? 0 : 1;
@@ -296,10 +298,68 @@ CModel *CreateCModel(U32 ctx, U32 aDen, U32 ir, U8 ref, U32 col){
 
   M->multiplier = mult[M->ctx-1];
 
+  #ifdef CORRECT
+  if(am != 0){
+    M->correct.seq       = CreateCBuffer(65535, 32);
+    M->correct.in        = 0;
+    M->correct.idx       = 0;
+    M->correct.mask      = (uint8_t *) Calloc(32, sizeof(uint8_t));
+    M->correct.threshold = am;
+    }
+  #endif
+
   Free(mult);
   return M;
   }
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#ifdef CORRECT
+int32_t BestId(uint32_t *f, uint32_t sum){
+  if(sum == 4) return -2; // ZERO COUNTERS
+
+  uint32_t x, best = 0, max = f[0];
+  for(x = 1 ; x < 4 ; ++x)
+    if(f[x] > max){
+      max = f[x];
+      best = x;
+      }
+
+  for(x = 0 ; x < 4 ; ++x) if(best != x && max == f[x]) return -1;
+
+  return best;
+  }
+#endif
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+inline void GetPModelIdx(U8 *p, CModel *M){
+  M->pModelIdx = ((M->pModelIdx-*(p-M->ctx)*M->multiplier)<<2)+*p;
+  }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+inline uint64_t GetPModelIdx2(U8 *p, CModel *M, uint64_t i){
+  return ((i-*(p-M->ctx)*M->multiplier)<<2)+*p;
+  }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#ifdef CORRECT
+void Fail(CModel *M, uint8_t sym){
+  uint32_t x, fails = 0;
+  for(x = 0 ; x < M->ctx ; ++x)
+    if(M->correct.mask[x] == 1)
+      ++fails;
+  if(fails <= M->correct.threshold)
+    ShiftBuffer(M->correct.mask, M->ctx, 1);
+  else 
+    M->correct.in = 0;
+  }
+#endif
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#ifdef CORRECT
+void Hit(CModel *M){
+  ShiftBuffer(M->correct.mask, M->ctx, 0);
+  }
+#endif
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void ResetCModelIdx(CModel *M){
@@ -312,12 +372,6 @@ void ResetCModelIdx(CModel *M){
 inline U8 GetPModelIdxIR(U8 *p, CModel *M){
   M->pModelIdxIR = (M->pModelIdxIR>>2)+GetCompNum(*p)*M->multiplier;
   return GetCompNum(*(p - M->ctx));
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-inline void GetPModelIdx(U8 *p, CModel *M){
-  M->pModelIdx = ((M->pModelIdx-*(p-M->ctx)*M->multiplier)<<2)+*p;
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
