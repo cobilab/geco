@@ -196,7 +196,7 @@ refNModels, INF *I){
             default:  // IT HAS ONE MAXIMUM FREQ
               if(cModels[n]->correct.in == 0){ // IF IS OUT
                 cModels[n]->correct.in   = 1;
-                memset(cModels[n]->correct.mask, cModels[n]->ctx, 0);
+                memset(cModels[n]->correct.mask, 0, cModels[n]->ctx);
                 }
               else{ // IF IS IN
                 if(best == sym) Hit(cModels[n]);

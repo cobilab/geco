@@ -25,7 +25,7 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
   uint32_t    n, k;
   double      *cModelWeight, cModelTotalWeight = 0, mA, mC, mG, mT;
   int32_t     idx = 0, idxOut = 0;
-  uint8_t     *outBuffer, *symbolBuffer, sym = 0, irSym = 0, *pos, extra;
+  uint8_t     *outBuffer, *symbolBuffer, sym = 0, irSym = 0, *pos;
   PModel      **pModel, *MX;
   #ifdef PROGRESS
   uint64_t    i = 0;
@@ -145,7 +145,7 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
             default:  // IT HAS ONE MAXIMUM FREQ
               if(cModels[n]->correct.in == 0){ // IF IS OUT
                 cModels[n]->correct.in   = 1;
-                memset(cModels[n]->correct.mask, cModels[n]->ctx, 0);
+                memset(cModels[n]->correct.mask, 0, cModels[n]->ctx);
                 }
               else{ // IF IS IN
                 if(best == sym) Hit(cModels[n]);
@@ -214,7 +214,7 @@ CModel **LoadReference(Parameters *P)
             line = 0, dna = 0;
   CModel    **cModels;
   #ifdef PROGRESS
-  uint64_t  i = 0, size = NBytesInFile(Reader);
+  uint64_t  i = 0;
   #endif
 
   if(P->verbose == 1)

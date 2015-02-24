@@ -102,7 +102,7 @@ uint64_t NDNASyminFile(FILE *file){
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 uint64_t NDNASymInFasta(FILE *file){
-  uint8_t  buffer[BUFFER_SIZE], sym = 0, header = 1, line = 0, dna = 0;
+  uint8_t  buffer[BUFFER_SIZE], sym = 0, header = 1;
   uint32_t k, idx;
   uint64_t nSymbols = 0;
 
