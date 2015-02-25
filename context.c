@@ -147,7 +147,7 @@ void UpdateCModelCounterIr(CModel *M, U32 sym){
 
   if(M->mode == HASH_TABLE_MODE){
     U8  counter;
-    U32 s, hIndex = idx = (XHASH(idx)) % HASH_SIZE;
+    U32 s, hIndex = (idx = XHASH(idx)) % HASH_SIZE;
     #ifdef PREC32B
     U32 b = idx & 0xffffffff;
     #else

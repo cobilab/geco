@@ -19,8 +19,8 @@
 
 void Compress(Parameters *P, CModel **cModels, uint8_t id, uint32_t 
 refNModels, INF *I){
-  FILE        *Reader  = Fopen(P->tar[id], "r"), *IAE = NULL;
-  char        *name    = concatenate(P->tar[id], ".co"), *IAEName = NULL;
+  FILE        *Reader  = Fopen(P->tar[id], "r");
+  char        *name    = concatenate(P->tar[id], ".co");
   FILE        *Writter = Fopen(name, "w");
   uint32_t    n, k, idxPos;
   int32_t     idx = 0;
@@ -36,10 +36,14 @@ refNModels, INF *I){
   if(P->verbose)
     fprintf(stderr, "Analyzing data and creating models ...\n");
 
+  #ifdef ESTIMATE
+  FILE *IAE = NULL;
+  char *IAEName = NULL;
   if(P->estim == 1){
     IAEName = concatenate(P->tar[id], ".iae");
     IAE = Fopen(IAEName, "w");
     }
+  #endif
   
   sym = fgetc(Reader);
   switch(sym){

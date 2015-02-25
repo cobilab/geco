@@ -9,6 +9,7 @@ project (GeCo)
 SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 SET(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 SET(RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+SET(CMAKE_BUILD_TYPE Release)
 
 add_executable (GeCo geco.c mem.c common.c buffer.c context.c bitio.c arith.c arith_aux.c defs.h) 
 add_executable (GeDe gede.c mem.c common.c buffer.c context.c bitio.c arith.c arith_aux.c defs.h) 
