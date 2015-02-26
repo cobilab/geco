@@ -28,10 +28,6 @@ common.o: common.c common.h $(DEPS)
 	$(CC) -c $(CFLAGS) common.c
 context.o: context.c context.h $(DEPS)
 	$(CC) -c $(CFLAGS) context.c
-#alpha.o: alpha.c alpha.h $(DEPS)
-#	$(CC) -c $(CFLAGS) alpha.c
-#gfcm.o: gfcm.c gfcm.h $(DEPS)
-#	$(CC) -c $(CFLAGS) gfcm.c
 bitio.o: bitio.c bitio.h
 	$(CC) -c $(CFLAGS) bitio.c
 arith.o: arith.c arith.h
