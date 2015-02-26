@@ -80,10 +80,9 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
       if(cModels[n]->am == 0)
         GetPModelIdx(pos, cModels[n]);
       else{
-        GetPModelIdx(cModels[n]->correct.seq->buf+cModels[n]->correct.seq->idx
-        -1, cModels[n]);
-        cModels[n]->correct.idx = GetPModelIdx2(pos, cModels[n],
-        cModels[n]->correct.idx);
+        GetPModelIdx(cModels[n]->correct.seq->buf+
+        cModels[n]->correct.seq->idx-1, cModels[n]);
+        GetPModelIdxCorr(pos, cModels[n]);
         }
       ComputePModel(cModels[n], pModel[n]);
       double factor = cModelWeight[n] / pModel[n]->sum;
@@ -112,16 +111,13 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
       pModel[n]->freqs[sym] / pModel[n]->sum;
       cModelTotalWeight += cModelWeight[n];
       if(P[id].model[n].type == TARGET){
-        if(cModels[n]->am != 0){
+        if(cModels[n]->am != 0)
           UpdateCModelCounter(cModels[n], sym, cModels[n]->correct.idx);
-          }
-        else{
+        else
           UpdateCModelCounter(cModels[n], sym, cModels[n]->pModelIdx);
-          }
-        //UpdateCModelCounter(cModels[n], sym);
         if(cModels[n]->ir == 1){                      // Inverted repeats
           irSym = GetPModelIdxIR(symbolBuffer+idx, cModels[n]);
-          UpdateCModelCounterIr(cModels[n], irSym);
+          UpdateCModelCounter(cModels[n], irSym, cModels[n]->pModelIdxIR);
           }
         }
       }
@@ -135,22 +131,22 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
           int32_t best = BestId(pModel[n]->freqs, pModel[n]->sum);
           switch(best){
             case -2:  // IT IS A ZERO COUNTER [NOT SEEN BEFORE]
-              if(cModels[n]->correct.in == 1)
-                Fail(cModels[n], best);
+              if(cModels[n]->correct.in != 0)
+                Fail(cModels[n]);
             break;
             case -1:  // IT HAS AT LEAST TWO MAXIMUM FREQS [CONFUSION FREQS]
-              if(cModels[n]->correct.in == 1)
-                Fail(cModels[n], best);
+              if(cModels[n]->correct.in != 0)
+                Fail(cModels[n]);
             break;
             default:  // IT HAS ONE MAXIMUM FREQ
               if(cModels[n]->correct.in == 0){ // IF IS OUT
-                cModels[n]->correct.in   = 1;
+                cModels[n]->correct.in = 1;
                 memset(cModels[n]->correct.mask, 0, cModels[n]->ctx);
                 }
               else{ // IF IS IN
                 if(best == sym) Hit(cModels[n]);
                 else{
-                  Fail(cModels[n], best);
+                  Fail(cModels[n]);
                   cModels[n]->correct.seq->buf[cModels[n]->correct.seq->idx]
                   = best; // UPDATE BUFFER WITH NEW SYMBOL
                   }
@@ -280,7 +276,7 @@ CModel **LoadReference(Parameters *P)
           UpdateCModelCounter(cModels[n], sym, cModels[n]->pModelIdx);
           if(cModels[n]->ir == 1){                        // Inverted repeats
             irSym = GetPModelIdxIR(symbolBuffer+idx, cModels[n]);
-            UpdateCModelCounterIr(cModels[n], irSym);
+            UpdateCModelCounter(cModels[n], irSym, cModels[n]->pModelIdxIR);
             }
           }
 

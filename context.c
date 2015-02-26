@@ -140,70 +140,10 @@ void SwapPos(Entry *A, Entry *B){
 #endif
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void UpdateCModelCounterIr(CModel *M, U32 sym){
-  U32 n;
-  ACC *AC;
-  U64 idx = M->pModelIdxIR;
-
-  if(M->mode == HASH_TABLE_MODE){
-    U8  counter;
-    U32 s, hIndex = (idx = XHASH(idx)) % HASH_SIZE;
-    #ifdef PREC32B
-    U32 b = idx & 0xffffffff;
-    #else
-    U16 b = idx & 0xffff;
-    #endif
-
-    for(n = 0 ; n < M->hTable.maxC ; n++){
-      if(M->hTable.entries[hIndex][n].key == b){
-        counter = (M->hTable.entries[hIndex][n].counters>>(sym<<1))&0x03;
-        if(counter == 3){
-          for(s = 0 ; s < 4 ; ++s){
-            if(s != sym){
-              counter =
-              ((M->hTable.entries[hIndex][n].counters>>(s<<1))&0x03)>>1;
-              M->hTable.entries[hIndex][n].counters &= ~(0x03<<(s<<1));
-              M->hTable.entries[hIndex][n].counters |= (counter<<(s<<1));
-              }
-            } // MOVE TO FRONT
-          #ifdef SWAP
-          SwapPos(&M->hTable.entries[hIndex][n], 
-          &M->hTable.entries[hIndex][M->hTable.index[hIndex]]);
-          #endif
-          return;
-          }
-        else{ // THERE IS STILL SPACE FOR INCREMENT COUNTER
-          ++counter;
-          M->hTable.entries[hIndex][n].counters &= ~(0x03<<(sym<<1));
-          M->hTable.entries[hIndex][n].counters |= (counter<<(sym<<1));
-          #ifdef SWAP
-          SwapPos(&M->hTable.entries[hIndex][n],
-          &M->hTable.entries[hIndex][M->hTable.index[hIndex]]);
-          #endif
-          return;
-          }
-        }
-      }
-    InsertKey(&M->hTable, hIndex, b, sym); // KEY NOT FOUND: WRITE ON OLDEST
-    }
-  else{
-    AC = &M->array.counters[idx << 2];
-    if(++AC[sym] == M->maxCount){
-      AC[0] >>= 1;
-      AC[1] >>= 1;
-      AC[2] >>= 1;
-      AC[3] >>= 1;
-      }
-    }
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 void UpdateCModelCounter(CModel *M, U32 sym, U64 im){
   U32 n;
   ACC *AC;
   U64 idx = im;
-  //U64 idx = M->pModelIdx;
 
   if(M->mode == HASH_TABLE_MODE){
     U8   counter;
@@ -300,10 +240,11 @@ CModel *CreateCModel(U32 ctx, U32 aDen, U32 ir, U8 ref, U32 col, U32 am){
 
   #ifdef CORRECT
   if(am != 0){
-    M->correct.seq       = CreateCBuffer(65535, 32);
+    M->correct.seq       = CreateCBuffer(BUFFER_SIZE, BGUARD);
     M->correct.in        = 0;
     M->correct.idx       = 0;
-    M->correct.mask      = (uint8_t *) Calloc(32, sizeof(uint8_t));
+    M->correct.idxRev    = M->nPModels-1;
+    M->correct.mask      = (uint8_t *) Calloc(BGUARD, sizeof(uint8_t));
     M->correct.threshold = am;
     }
   #endif
@@ -329,6 +270,28 @@ int32_t BestId(uint32_t *f, uint32_t sum){
   return best;
   }
 #endif
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+void ResetCModelIdx(CModel *M){
+  M->pModelIdx   = 0;
+  M->pModelIdxIR = M->nPModels - 1;
+  }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+inline U8 GetPModelIdxIR(U8 *p, CModel *M){
+  M->pModelIdxIR = (M->pModelIdxIR>>2)+GetCompNum(*p)*M->multiplier;
+  return GetCompNum(*(p-M->ctx));
+  }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+inline U8 GetPModelIdxIRCorr(U8 *p, CModel *M){
+  M->correct.idxRev = (M->correct.idxRev>>2)+GetCompNum(*p)*M->multiplier;
+  return GetCompNum(*(p-M->ctx));
+  }
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 inline void GetPModelIdx(U8 *p, CModel *M){
@@ -337,16 +300,16 @@ inline void GetPModelIdx(U8 *p, CModel *M){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-inline uint64_t GetPModelIdx2(U8 *p, CModel *M, uint64_t i){
-  return ((i-*(p-M->ctx)*M->multiplier)<<2)+*p;
+inline void GetPModelIdxCorr(U8 *p, CModel *M){
+  M->correct.idx = ((M->correct.idx-*(p-M->ctx)*M->multiplier)<<2)+*p;
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #ifdef CORRECT
-void Fail(CModel *M, uint8_t sym){
+void Fail(CModel *M){
   uint32_t x, fails = 0;
   for(x = 0 ; x < M->ctx ; ++x)
-    if(M->correct.mask[x] == 1)
+    if(M->correct.mask[x] != 0)
       ++fails;
   if(fails <= M->correct.threshold)
     ShiftBuffer(M->correct.mask, M->ctx, 1);
@@ -360,19 +323,6 @@ void Hit(CModel *M){
   ShiftBuffer(M->correct.mask, M->ctx, 0);
   }
 #endif
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-void ResetCModelIdx(CModel *M){
-  M->pModelIdx   = 0;
-  M->pModelIdxIR = M->nPModels - 1;
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-inline U8 GetPModelIdxIR(U8 *p, CModel *M){
-  M->pModelIdxIR = (M->pModelIdxIR>>2)+GetCompNum(*p)*M->multiplier;
-  return GetCompNum(*(p - M->ctx));
-  }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

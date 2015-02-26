@@ -47,11 +47,11 @@ Array;
 #ifdef CORRECT
 typedef struct{
   uint32_t in;
-  CBUF     *seq;  // BUFFER FOR EDITED SEQUENCE
-  uint8_t  *mask; // BUFFER FOR FAILS & HITS
-  uint64_t idx;   // AUXILIAR INDEX FOR UPDATE
+  CBUF     *seq;     // BUFFER FOR EDITED SEQUENCE
+  uint8_t  *mask;    // BUFFER FOR FAILS & HITS
+  uint64_t idx;      // AUXILIAR INDEX FOR UPDATE
+  uint64_t idxRev;   // AUXILIAR INVERTED INDEX FOR UPDATE
   uint32_t threshold;
-  uint32_t fails;
   }
 Correct;
 #endif
@@ -90,21 +90,19 @@ FloatPModel;
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 #ifdef CORRECT
-inline void     CorrectIdx            (CModel *, uint8_t);
 int32_t         BestId                (uint32_t *, uint32_t);
 void            Hit                   (CModel *);
-void            Fail                  (CModel *, uint8_t);
+void            Fail                  (CModel *);
 #endif
 void            FreeCModel            (CModel *);
 inline void     GetPModelIdx          (U8 *, CModel *);
-inline uint64_t GetPModelIdx2         (U8 *, CModel *, uint64_t);
+inline void     GetPModelIdxCorr      (U8 *, CModel *);
 inline U8       GetPModelIdxIR        (U8 *, CModel *);
+//inline U8       GetPModelIdxIRCorr       (U8 *, CModel *);
 PModel          *CreatePModel         (U32);
 FloatPModel     *CreateFloatPModel    (U32);
 void            ResetCModelIdx        (CModel *);
 void            UpdateCModelCounter   (CModel *, U32, U64);
-void            UpdateCModelCounterIr (CModel *, U32);
-void            UpdateCModelCounterRM (CModel *, U32);
 CModel          *CreateCModel         (U32, U32, U32, U8, U32, U32);
 void            ComputePModel         (CModel *, PModel *);
 double          PModelSymbolNats      (PModel *, U32);
