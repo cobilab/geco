@@ -44,7 +44,6 @@ typedef struct{
 }
 Array;
 
-#ifdef CORRECT
 typedef struct{
   uint32_t in;
   CBUF     *seq;     // BUFFER FOR EDITED SEQUENCE
@@ -54,7 +53,6 @@ typedef struct{
   uint32_t threshold;
   }
 Correct;
-#endif
 
 typedef struct{
   U32        ctx;                    // Current depth of context template
@@ -64,9 +62,7 @@ typedef struct{
   U64        multiplier;
   U64        pModelIdx;
   U64        pModelIdxIR;
-  #ifdef CORRECT
   Correct    correct;
-  #endif
   U8         ir;
   U8         ref;
   U32        am;
@@ -89,16 +85,15 @@ FloatPModel;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-#ifdef CORRECT
 int32_t         BestId                (uint32_t *, uint32_t);
 void            Hit                   (CModel *);
 void            Fail                  (CModel *);
-#endif
 void            FreeCModel            (CModel *);
 inline void     GetPModelIdx          (U8 *, CModel *);
 inline void     GetPModelIdxCorr      (U8 *, CModel *);
 inline U8       GetPModelIdxIR        (U8 *, CModel *);
 //inline U8       GetPModelIdxIRCorr       (U8 *, CModel *);
+void            CorrectCModel         (CModel *, PModel *, uint8_t);
 PModel          *CreatePModel         (U32);
 FloatPModel     *CreateFloatPModel    (U32);
 void            ResetCModelIdx        (CModel *);

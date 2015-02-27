@@ -9,8 +9,7 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // RUNNING OPTIMIZATIONS : MEMORY / SPEED
 
-#define CORRECT
-//#define ESTIMATE
+#define ESTIMATE
 #define PROGRESS
 #define FSEARCHMODE
 //#define PREC32B // UNCOMMENT: CONTEXTS UP TO 28 (IT WILL USE MORE MEMORY!)

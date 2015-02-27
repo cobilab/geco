@@ -115,47 +115,18 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
           UpdateCModelCounter(cModels[n], sym, cModels[n]->correct.idx);
         else
           UpdateCModelCounter(cModels[n], sym, cModels[n]->pModelIdx);
-        if(cModels[n]->ir == 1){                      // Inverted repeats
+        if(cModels[n]->ir == 1){                // REVERSE COMPLEMENTS
           irSym = GetPModelIdxIR(symbolBuffer+idx, cModels[n]);
           UpdateCModelCounter(cModels[n], irSym, cModels[n]->pModelIdxIR);
           }
         }
       }
 
-    for(n = 0 ; n < P->nModels ; ++n) // RENORMALIZE THE WEIGHTS
-      cModelWeight[n] /= cModelTotalWeight;
-
-      #ifdef CORRECT
-      for(n = 0 ; n < P->nModels ; ++n){
-        if(cModels[n]->am != 0){
-          int32_t best = BestId(pModel[n]->freqs, pModel[n]->sum);
-          switch(best){
-            case -2:  // IT IS A ZERO COUNTER [NOT SEEN BEFORE]
-              if(cModels[n]->correct.in != 0)
-                Fail(cModels[n]);
-            break;
-            case -1:  // IT HAS AT LEAST TWO MAXIMUM FREQS [CONFUSION FREQS]
-              if(cModels[n]->correct.in != 0)
-                Fail(cModels[n]);
-            break;
-            default:  // IT HAS ONE MAXIMUM FREQ
-              if(cModels[n]->correct.in == 0){ // IF IS OUT
-                cModels[n]->correct.in = 1;
-                memset(cModels[n]->correct.mask, 0, cModels[n]->ctx);
-                }
-              else{ // IF IS IN
-                if(best == sym) Hit(cModels[n]);
-                else{
-                  Fail(cModels[n]);
-                  cModels[n]->correct.seq->buf[cModels[n]->correct.seq->idx]
-                  = best; // UPDATE BUFFER WITH NEW SYMBOL
-                  }
-                }
-            }
-          UpdateCBuffer(cModels[n]->correct.seq);
-          }
-        }
-      #endif
+    for(n = 0 ; n < P->nModels ; ++n){
+      cModelWeight[n] /= cModelTotalWeight; // RENORMALIZE THE WEIGHTS
+      if(cModels[n]->am != 0)               // CORRECT CMODEL CONTEXTS
+        CorrectCModel(cModels[n], pModel[n], sym);
+      }
 
     if(++idxOut == BUFFER_SIZE){
       fwrite(outBuffer, 1, idxOut, Writter);
