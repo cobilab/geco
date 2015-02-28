@@ -62,6 +62,15 @@ static void InsertKey(HashTable *H, U32 hi, U64 idx, U8 s){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+inline void GetFreqsFromHCC(HCC c, uint32_t a, PModel *P){
+   P->sum  = (P->freqs[0] = a * ( c &  0x03) + 1);
+   P->sum += (P->freqs[1] = a * ((c & (0x03<<2))>>2) + 1);
+   P->sum += (P->freqs[2] = a * ((c & (0x03<<4))>>4) + 1);
+   P->sum += (P->freqs[3] = a * ((c & (0x03<<6))>>6) + 1);
+   }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 void GetHCCounters(HashTable *H, U64 key, PModel *P, uint32_t a){
   U32 n, hIndex = key % HASH_SIZE;
   #ifdef PREC32B
@@ -75,29 +84,14 @@ void GetHCCounters(HashTable *H, U64 key, PModel *P, uint32_t a){
   // FROM INDEX-1 TO 0
   for(n = pos+1 ; n-- ; ){
     if(H->entries[hIndex][n].key == b){
-      P->freqs[0] = a * ( H->entries[hIndex][n].counters &  0x03);
-      P->freqs[1] = a * ((H->entries[hIndex][n].counters & (0x03<<2))>>2);
-      P->freqs[2] = a * ((H->entries[hIndex][n].counters & (0x03<<4))>>4);
-      P->freqs[3] = a * ((H->entries[hIndex][n].counters & (0x03<<6))>>6);
-      P->sum  = ++P->freqs[0];
-      P->sum += ++P->freqs[1];
-      P->sum += ++P->freqs[2];
-      P->sum += ++P->freqs[3];
+      GetFreqsFromHCC(H->entries[hIndex][n].counters, a, P);
       return;
       }
     }
-
   // FROM MAX_COLISIONS TO INDEX
   for(n = (H->maxC-1) ; n > pos ; --n){
     if(H->entries[hIndex][n].key == b){
-      P->freqs[0] = a * ( H->entries[hIndex][n].counters &  0x03);
-      P->freqs[1] = a * ((H->entries[hIndex][n].counters & (0x03<<2))>>2);
-      P->freqs[2] = a * ((H->entries[hIndex][n].counters & (0x03<<4))>>4);
-      P->freqs[3] = a * ((H->entries[hIndex][n].counters & (0x03<<6))>>6);
-      P->sum  = ++P->freqs[0];
-      P->sum += ++P->freqs[1];
-      P->sum += ++P->freqs[2];
-      P->sum += ++P->freqs[3];
+      GetFreqsFromHCC(H->entries[hIndex][n].counters, a, P);
       return;
       }
     }
@@ -105,14 +99,7 @@ void GetHCCounters(HashTable *H, U64 key, PModel *P, uint32_t a){
   // FROM 0 TO MAX
   for(n = 0 ; n < H->maxC ; ++n){
     if(H->entries[hIndex][n].key == b){
-      P->freqs[0] = a * ( H->entries[hIndex][n].counters &  0x03);
-      P->freqs[1] = a * ((H->entries[hIndex][n].counters & (0x03<<2))>>2);
-      P->freqs[2] = a * ((H->entries[hIndex][n].counters & (0x03<<4))>>4);
-      P->freqs[3] = a * ((H->entries[hIndex][n].counters & (0x03<<6))>>6);
-      P->sum  = ++P->freqs[0];
-      P->sum += ++P->freqs[1];
-      P->sum += ++P->freqs[2];
-      P->sum += ++P->freqs[3];
+      GetFreqsFromHCC(H->entries[hIndex][n].counters, a, P);
       return;
       }
     }

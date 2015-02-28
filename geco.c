@@ -182,8 +182,6 @@ refNModels, INF *I){
 
       for(n = 0 ; n < P->nModels ; ++n){
         cModelWeight[n] /= cModelTotalWeight; // RENORMALIZE THE WEIGHTS
-
-//      for(n = 0 ; n < P->nModels ; ++n)
         if(cModels[n]->am != 0)
           CorrectCModel(cModels[n], pModel[n], sym);
         }
