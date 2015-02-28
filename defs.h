@@ -64,6 +64,7 @@ U32 garbage;
 #define BUFFER_SIZE            65535      
 #define PROGRESS_MIN           1000000
 #define DEF_VERSION            0
+#define DEF_EXAMPLE            0
 #define DEFAULT_HELP           0
 #define DEFAULT_VERBOSE        0
 #define DEFAULT_FORCE          0
