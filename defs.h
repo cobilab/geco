@@ -39,6 +39,7 @@ typedef struct{
   U8       verbose;
   U8       force;
   U8       estim;
+  U8       level;
   U32      col;
   ModelPar *model;
   char     *ref;
@@ -68,6 +69,9 @@ U32 garbage;
 #define DEFAULT_HELP           0
 #define DEFAULT_VERBOSE        0
 #define DEFAULT_FORCE          0
+#define DEFAULT_LEVEL          5
+#define MAX_LEVEL              9
+#define MIN_LEVEL              1
 #define MAX_CTX                31
 #define MIN_CTX                1
 #define MAX_DEN                1000000

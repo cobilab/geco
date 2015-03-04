@@ -3,14 +3,14 @@
 #============================================================================#
 BIN    = .
 CC     = gcc
-CPLP   = -g
+CPLP   =
 #-----------------------------------------------------------------------------
 CFLAGS = -O3 -Wall $(CPLP)
 #-----------------------------------------------------------------------------
 LIBS   = -lm
 DEPS   = defs.h
 PROGS  = $(BIN)/GeCo $(BIN)/GeDe
-OBJS   = mem.o common.o buffer.o context.o bitio.o arith.o \
+OBJS   = mem.o common.o buffer.o levels.o context.o bitio.o arith.o \
          arith_aux.o 
 #-----------------------------------------------------------------------------
 all:
@@ -26,6 +26,8 @@ buffer.o: buffer.c buffer.h $(DEPS)
 	$(CC) -c $(CFLAGS) buffer.c
 common.o: common.c common.h $(DEPS)
 	$(CC) -c $(CFLAGS) common.c
+levels.o: levels.c levels.h $(DEPS)
+	$(CC) -c $(CFLAGS) levels.c
 context.o: context.c context.h $(DEPS)
 	$(CC) -c $(CFLAGS) context.c
 #alpha.o: alpha.c alpha.h $(DEPS)

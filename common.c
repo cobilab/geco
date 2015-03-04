@@ -483,6 +483,23 @@ void TestReadFile(char *fn)
   fclose(f);
   }
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// GET STRING TO ARGV
+//
+int32_t StrToArgv(char *s, char ***v){
+  int32_t n = 0, c = 2;
+  char *d = strdup(s);   // STRDUP <=> CLONE STR
+  while(d[n]) if(d[n++] == ' ') ++c;
+  *v = (char **) Calloc(c, sizeof(char *));
+  n = 0; (*v)[0] = d; c = 1;
+  do if(d[n] == ' '){
+       d[n] = '\0';
+       (*v)[c++] = d+n+1;
+       }
+  while(d[++n]);
+  return c;
+  }
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 uint32_t ReadFNames(Parameters *P, char *arg)

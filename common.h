@@ -52,7 +52,8 @@ void        FAccessWPerm     (char    *);
 uint32_t    ReadFNames       (Parameters *, char *);
 inline void CalcProgress     (uint64_t , uint64_t);
 void        PrintArgs        (Parameters *);
-char        *concatenate     (char *   , char *);
+char        *concatenate     (char *, char *);
+int32_t     StrToArgv        (char *, char ***);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

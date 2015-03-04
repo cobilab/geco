@@ -8,6 +8,7 @@
 #include "mem.h"
 #include "defs.h"
 #include "buffer.h"
+#include "levels.h"
 #include "common.h"
 #include "context.h"
 #include "bitio.h"
@@ -341,10 +342,13 @@ CModel **LoadReference(Parameters *P)
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 int32_t main(int argc, char *argv[]){
-  char        **p = *&argv;
+  char        **p = *&argv, **xargv, *xpl = NULL;
   CModel      **refModels;
-  uint32_t    n, k, refNModels;
+  int32_t     xargc = 0;
+  uint32_t    n, k, refNModels, col;
   uint64_t    totalBytes, totalSize;
+  double      gamma;
+  
   Parameters  *P;
   INF         *I;
 
@@ -361,6 +365,7 @@ int32_t main(int argc, char *argv[]){
     "  -v                    verbose mode (more information),               \n"
     "  -V                    display version number,                        \n"
     "  -f                    force overwrite of output,                     \n"
+    "  -l <level>            level of compression [1;9] (lazy -tm setup),   \n"
     "  -g <gamma>            mixture decayment forgetting factor. It is     \n"
     "                        a real value in the interval [0;1),            \n"
     "  -c <cache>            maximum collisions for hash cache. Memory      \n"
@@ -485,12 +490,23 @@ int32_t main(int argc, char *argv[]){
   P->verbose  = ArgsState  (DEFAULT_VERBOSE, p, argc, "-v" );
   P->force    = ArgsState  (DEFAULT_FORCE,   p, argc, "-f" );
   P->estim    = ArgsState  (0,               p, argc, "-e" );
-  P->col      = ArgsNum    (MAX_COLLISIONS,  p, argc, "-c", 1, 10000);
+  P->level    = ArgsNum    (0, p, argc, "-l", MIN_LEVEL, MAX_LEVEL);
 
   P->nModels  = 0;
   for(n = 1 ; n < argc ; ++n)
     if(strcmp(argv[n], "-rm") == 0 || strcmp(argv[n], "-tm") == 0)
       P->nModels += 1;
+
+  if(P->nModels == 0 && P->level == 0)
+    P->level = DEFAULT_LEVEL;
+  
+  if(P->level != 0){
+    xpl = GetLevels(P->level);
+    xargc = StrToArgv(xpl, &xargv);
+    for(n = 1 ; n < xargc ; ++n)
+      if(strcmp(xargv[n], "-rm") == 0 || strcmp(xargv[n], "-tm") == 0)
+        P->nModels += 1;
+    }
 
   if(P->nModels == 0){
     fprintf(stderr, "Error: at least you need to use a context model!\n");
@@ -506,11 +522,35 @@ int32_t main(int argc, char *argv[]){
       P->model[k++] = ArgsUniqModel(argv[n+1], 1);
       ++refNModels;
       }
+  if(P->level != 0){
+    for(n = 1 ; n < xargc ; ++n)
+      if(strcmp(xargv[n], "-rm") == 0){
+        P->model[k++] = ArgsUniqModel(xargv[n+1], 1);
+        ++refNModels;
+        }
+    }
+
   for(n = 1 ; n < argc ; ++n)
     if(strcmp(argv[n], "-tm") == 0)
       P->model[k++] = ArgsUniqModel(argv[n+1], 0);
+  if(P->level != 0){
+    for(n = 1 ; n < xargc ; ++n)
+      if(strcmp(xargv[n], "-tm") == 0)
+        P->model[k++] = ArgsUniqModel(xargv[n+1], 0);
+    }
 
-  P->gamma    = ArgsDouble (DEFAULT_GAMMA, p, argc, "-g");
+  gamma = DEFAULT_GAMMA;
+  for(n = 1 ; n < xargc ; ++n) 
+    if(strcmp(xargv[n], "-g") == 0) 
+      gamma = atof(xargv[n+1]);
+
+  col = MAX_COLLISIONS;
+  for(n = 1 ; n < xargc ; ++n) 
+    if(strcmp(xargv[n], "-c") == 0) 
+      col = atoi(xargv[n+1]);
+
+  P->col      = ArgsNum    (col,   p, argc, "-c", 1, 10000);
+  P->gamma    = ArgsDouble (gamma, p, argc, "-g");
   P->gamma    = ((int)(P->gamma * 65536)) / 65536.0;
   P->ref      = ArgsString (NULL, p, argc, "-r");
   P->nTar     = ReadFNames (P, argv[argc-1]);

@@ -334,6 +334,33 @@ gede.c.s:
 	$(MAKE) -f CMakeFiles/GeDe.dir/build.make CMakeFiles/GeDe.dir/gede.c.s
 .PHONY : gede.c.s
 
+levels.o: levels.c.o
+.PHONY : levels.o
+
+# target to build an object file
+levels.c.o:
+	$(MAKE) -f CMakeFiles/GeCo.dir/build.make CMakeFiles/GeCo.dir/levels.c.o
+	$(MAKE) -f CMakeFiles/GeDe.dir/build.make CMakeFiles/GeDe.dir/levels.c.o
+.PHONY : levels.c.o
+
+levels.i: levels.c.i
+.PHONY : levels.i
+
+# target to preprocess a source file
+levels.c.i:
+	$(MAKE) -f CMakeFiles/GeCo.dir/build.make CMakeFiles/GeCo.dir/levels.c.i
+	$(MAKE) -f CMakeFiles/GeDe.dir/build.make CMakeFiles/GeDe.dir/levels.c.i
+.PHONY : levels.c.i
+
+levels.s: levels.c.s
+.PHONY : levels.s
+
+# target to generate assembly for a file
+levels.c.s:
+	$(MAKE) -f CMakeFiles/GeCo.dir/build.make CMakeFiles/GeCo.dir/levels.c.s
+	$(MAKE) -f CMakeFiles/GeDe.dir/build.make CMakeFiles/GeDe.dir/levels.c.s
+.PHONY : levels.c.s
+
 mem.o: mem.c.o
 .PHONY : mem.o
 
@@ -395,6 +422,9 @@ help:
 	@echo "... gede.o"
 	@echo "... gede.i"
 	@echo "... gede.s"
+	@echo "... levels.o"
+	@echo "... levels.i"
+	@echo "... levels.s"
 	@echo "... mem.o"
 	@echo "... mem.i"
 	@echo "... mem.s"
