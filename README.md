@@ -131,6 +131,78 @@ Mandatory arguments:
                                                                        
 Report bugs to &#60{pratas,ap,pjf}@ua.pt&#62. 
 </pre>
+
+To get several running examples type:
+<pre>
+./GeCo -x
+</pre>
+This will print the following:
+<pre>
+GeCo running examples:                                                 
+                                                                       
+Considerations: the decompression is symmetric, therefore the same     
+resources, namely time and memory will be used as in the compression.  
+The memory used, after creating the models, will be constant, even in  
+deeper context models (cache-hash context model).                      
+                                                                       
+[A]=> Compressing sequences C(X) or C(X,Y):                            
+                                                                       
+1) Compression of a human genome (using 5.8 GB RAM memory):            
+   ./GeCo -tm 6:1:0:0 -tm 13:20:1:0 -tm 19:50:1:2 -c 35 -g 0.8 HS      
+                                                                       
+2) Compression of a human genome (using 3.8 GB of RAM memory):         
+   ./GeCo -tm 6:1:0:0 -tm 13:10:1:0 -tm 18:50:1:0 -c 20 -g 0.8 HS      
+                                                                       
+3) Compression of a human genome (using 0.5 GB of RAM memory):         
+   ./GeCo -tm 6:1:0:0 -tm 13:10:1:0 -g 0.8 HS                          
+                                                                       
+   Decompression for A1, A2 and A3: ./GeDe HS.co                       
+   The decompressed file will be HS.de                                 
+                                                                       
+4) Compression of a human chromosome Y (repetitive nature):            
+   ./GeCo -tm 1:1:0:0 -tm 4:1:0:0 -tm 6:1:1:0 -tm 8:1:0:0 -tm 11:10:1:0
+   -tm 14:10:0:1 -tm 14:50:1:0 -tm 18:30:1:6 -c 10 -g 0.88 CY.fasta    
+   Decompression for A4: ./GeDe CY.fasta.co                            
+   The decompressed file will be CY.fasta.de                           
+                                                                       
+5) Highly-redundant genomic sequence (full ACGT from fastq)            
+   ./GeCo -tm 4:1:0:0 -tm 11:1:0:0 -tm 14:20:0:0 -tm 20:100:0:0 -c 50  
+   -g 0.8 SRR957627.fastq                                              
+   Decompression for A5: ./GeDe SRR957627.fastq.co                     
+   The decompressed file will be SRR957627.fastq.de                    
+                                                                       
+                                                                       
+[B]=> Conditional (referential) exclusive compression C(X||Y):         
+                                                                       
+1) Compression of the gorilla (GG8) chromosome 8 given exclusively     
+   information from chimpanzee (PT8):                                  
+   ./GeCo -rm 4:1:0:0 -rm 18:100:1:0 -c 20 -r PT8 GG8                  
+   Decompression for B1: ./GeDe -r PT8 GG8.co                          
+   The decompressed file will be GG8.de                                
+                                                                       
+2) Compression of the same file (for idempotency studies):             
+   ./GeCo -rm 20:1000:0:0 -c 30 -r File1.txt File1.txt                 
+   Decompression for B2: ./GeDe -r File1.txt File1.txt.co              
+   The decompressed file will be File1.txt.de                          
+                                                                       
+3) Compression of a human (HS5), chimpanzee (PT5) and orangutan (PA5)  
+   chromsomes 5 given exclusively the gorilla (GG17) chromosome 17 as  
+   reference:                                                          
+   ./GeCo -rm 20:100:1:0 -c 20 -r GG17 HS5:PT5:PA5                     
+   Decompression for B3: ./GeDe -r GG17 HS5.co:PT5.co:PA5.co           
+   The decompressed files will be HS5.de, PT5.de and PA5.de            
+                                                                       
+                                                                       
+[C]=> Conditional compression C(X|Y) [use reference and target]:       
+                                                                       
+1) Compression of a human (HS5), chimpanzee (PT5) and orangutan (PA5)  
+   chromsomes 5 given the gorilla (GG17) chromosome 17 as reference:   
+   ./GeCo -tm 4:1:0:0 -tm 8:1:0:0 -tm 11:10:0:0 -tm 14:20:1:0          
+   -rm 20:100:0:0 -c 20 -r GG17 HS5:PT5:PA5                            
+   Decompression for B3: ./GeDe -r GG17 HS5.co:PT5.co:PA5.co           
+   The decompressed files will be HS5.de, PT5.de and PA5.de
+</pre>
+
 ## CITATION ##
 
 On using this software/method please cite:
