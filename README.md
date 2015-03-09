@@ -1,28 +1,77 @@
 # GeCo #
 <p align="center"><img src="/logo.png" 
-alt="EAGLE" width="350" height="250" border="0" /></p>
-Compress and analyze genomic sequences. GeCo can afford individual compression and referential compression. As a compression tool, GeCo is able to provide additional compression gains over several top specific tools, while as an analysis tool, GeCo is hable to determine absolute measures, namely for many distance computations, and local measures, such as the information content contained in each element, providing a way to quantify and locate specific genomic events.
+alt="EAGLE" width="350" height="260" border="0" /></p>
+Compress and analyze genomic sequences. As a compression tool, GeCo is able to provide additional compression gains over several top specific tools, while as an analysis tool, GeCo is hable to determine absolute measures, namely for many distance computations, and local measures, such as the information content contained in each element, providing a way to quantify and locate specific genomic events. GeCo can afford individual compression and referential compression.
 
 ## INSTALLATION ##
 
-Simply run the following instructions at a Linux terminal:
+Cmake is needed for installation (http://www.cmake.org/). You can download it directly from http://www.cmake.org/cmake/resources/software.html or use an appropriate packet manager. In the following instructions we show the procedure to install, compile and run GeCo:
+
+### STEP 1
+
+Download, install and resolve conflicts.
+
+#### Linux 
+<pre>
+sudo apt-get install cmake
+wget https://github.com/pratas/geco/archive/master.zip
+unzip master.zip
+cd geco-master
+cmake .
+make
+</pre>
+
+Alternatively, you can install (without cmake and only for linux) using
 
 <pre>
 wget https://github.com/pratas/geco/archive/master.zip
 unzip master.zip
 cd geco-master
-cmake . 
+mv Makefile.linux Makefile
 make
 </pre>
+
+#### OS X
+Install brew:
+<pre>
+ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)"
+</pre>
+only if you do not have it. After type:
+<pre>
+brew install cmake
+brew install wget
+brew install gcc48
+wget https://github.com/pratas/geco/archive/master.zip
+unzip master.zip
+cd geco-master
+cmake .
+make
+</pre>
+With some versions you might need to create a link to cc or gcc (after the *brew install gcc48* command), namely
+<pre>
+sudo mv /usr/bin/gcc /usr/bin/gcc-old   # gcc backup
+sudo mv /usr/bin/cc /usr/bin/cc-old     # cc backup
+sudo ln -s /usr/bin/gcc-4.8 /usr/bin/gcc
+sudo ln -s /usr/bin/gcc-4.8 /usr/bin/cc
+</pre>
+In some versions, the gcc48 is installed over /usr/local/bin, therefore you might need to substitute the last two commands by the following two:
+<pre>
+sudo ln -s /usr/local/bin/gcc-4.8 /usr/bin/gcc
+sudo ln -s /usr/local/bin/gcc-4.8 /usr/bin/cc
+</pre>
+
+#### Windows
+
+In windows use cygwin (https://www.cygwin.com/) and make sure that it is included in the installation: cmake, make, zcat, unzip, wget, tr, grep (and any dependencies). If you install the complete cygwin packet then all these will be installed. After, all steps will be the same as in Linux.
 
 ## EXECUTION
 
 ### Run GeCo
 
-Run GeCo using:
+Run GeCo using (lazy) level 5:
 
 <pre>
-./GeCo -tm 4:1:0 -tm 8:1:0 -tm 14:1:0 -tm 1:18:1 file.seq
+./GeCo -l 5 File.seq
 </pre>
 
 ## PARAMETERS
