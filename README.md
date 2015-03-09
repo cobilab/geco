@@ -88,20 +88,48 @@ or
 These will print the following options:
 <pre>
 <p>
-Usage: GeCo &#60OPTIONS&#62 ... -r &#60FILE&#62  [FILE]:&#60...&#62
-
-  -v                     verbose mode             
-  -f                     force (be sure!)             
-  -rm &#60ctx&#62:&#60den&#62:&#60ir&#62   reference context model       
-  -rm &#60ctx&#62:&#60den&#62:&#60ir&#62   reference context model
-  ...
-  -tm &#60ctx&#62:&#60den&#62:&#60ir&#62   target context model  
-  -tm &#60ctx&#62:&#60den&#62:&#60ir&#62   target context model
-  ...
-  -g  &#60gamma&#62            gamma factor
-  -r  &#60rFile&#62            reference file
-
-[tFile1]:&#60tFile2&#62:&#60...&#62  target file(s)</p>
+Usage: GeCo [OPTION]... -r [FILE]  [FILE]:[...]                        
+Compress and analyze a genomic sequence (by default, compress).        
+                                                                       
+Non-mandatory arguments:                                               
+                                                                       
+  -h                    give this help,                                
+  -x                    show several running examples,                 
+  -s                    show GeCo compression levels,                  
+  -v                    verbose mode (more information),               
+  -V                    display version number,                        
+  -f                    force overwrite of output,                     
+  -l &#60level&#62            level of compression [1;9] (lazy -tm setup),   
+  -g &#60gamma&#62            mixture decayment forgetting factor. It is     
+                        a real value in the interval [0;1),            
+  -c &#60cache&#62            maximum collisions for hash cache. Memory      
+                        values are higly dependent of the parameter    
+                        specification,                                 
+  -e                    it creates a file with the extension ".iae"  
+                        with the respective information content. If    
+                        the file is FASTA or FASTQ it will only use    
+                        the "ACGT" (genomic) data,                   
+  -r &#60FILE&#62             reference file ("-rm" are loaded here),      
+                                                                       
+Mandatory arguments:                                                   
+                                                                       
+  -rm &#60c&#62:&#60d&#62:&#60i&#62:&#60m&#62   reference context model (ex:-rm 13:100:0:0),   
+  -rm &#60c&#62:&#60d>:&#60i&#62:&#60m&#62   reference context model (ex:-rm 18:1000:0:1),  
+  ...                                                                  
+  -tm &#60c&#62:&#60d&#62:&#60i&#62:&#60m&#62   target context model (ex:-tm 4:1:0:0),         
+  -tm &#60c&#62:&#60d&#62:&#60i&#62:&#60m&#62   target context model (ex:-tm 18:20:1:1),       
+  ...                                                                  
+                        target and reference templates use &#60c&#62 for     
+                        context-order size, &#60d&#62 for alpha (1/&#60d&#62),     
+                        &#60i&#62 (0 or 1) to set the usage of inverted      
+                        repeats (1 to use) and &#60m&#62 to the maximum      
+                        allowed mutation on the context without        
+                        being discarded (usefull in deep contexts),    
+                                                                       
+  &#60FILE&#62                file to compress (last argument). For more     
+                        files use splitting ":" characters.          
+                                                                       
+Report bugs to &#60{pratas,ap,pjf}@ua.pt&#62. 
 </pre>
 ## CITATION ##
 
