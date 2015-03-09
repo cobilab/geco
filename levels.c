@@ -27,16 +27,16 @@ char *GetLevels(uint8_t l){
 // PRINT LEVELS FROM LEVELS
 //
 void PrintLevels(void){
-  fprintf(stderr, "Level %u: %s\n", 1, LEVEL_1);
-  fprintf(stderr, "Level %u: %s\n", 2, LEVEL_2);
-  fprintf(stderr, "Level %u: %s\n", 3, LEVEL_3);
-  fprintf(stderr, "Level %u: %s\n", 4, LEVEL_4);
-  fprintf(stderr, "Level %u: %s\n", 5, LEVEL_5);
-  fprintf(stderr, "Level %u: %s\n", 6, LEVEL_6);
-  fprintf(stderr, "Level %u: %s\n", 7, LEVEL_7);
-  fprintf(stderr, "Level %u: %s\n", 8, LEVEL_8);
-  fprintf(stderr, "Level %u: %s\n", 9, LEVEL_9);
-  fprintf(stderr, "Level %u: %s\n", 10, LEVEL_10);
+  fprintf(stderr, "Level%s\n", LEVEL_1);
+  fprintf(stderr, "Level%s\n", LEVEL_2);
+  fprintf(stderr, "Level%s\n", LEVEL_3);
+  fprintf(stderr, "Level%s\n", LEVEL_4);
+  fprintf(stderr, "Level%s\n", LEVEL_5);
+  fprintf(stderr, "Level%s\n", LEVEL_6);
+  fprintf(stderr, "Level%s\n", LEVEL_7);
+  fprintf(stderr, "Level%s\n", LEVEL_8);
+  fprintf(stderr, "Level%s\n", LEVEL_9);
+  fprintf(stderr, "Level%s\n", LEVEL_10);
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

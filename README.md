@@ -14,6 +14,7 @@ Simply run the following instructions at a Linux terminal:
 wget https://github.com/pratas/geco/archive/master.zip
 unzip master.zip
 cd geco-master
+cmake . 
 make
 </pre>
 

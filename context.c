@@ -352,16 +352,17 @@ void CorrectCModel(CModel *M, PModel *P, uint8_t sym){
 
 void ComputePModel(CModel *M, PModel *P){
   ACC *ac;
+  uint32_t aDen = M->alphaDen;
   switch(M->mode){
     case HASH_TABLE_MODE:
-      GetHCCounters(&M->hTable, XHASH(M->pModelIdx), P, M->alphaDen);
+      GetHCCounters(&M->hTable, XHASH(M->pModelIdx), P, aDen);
     break;
     case ARRAY_MODE:
       ac = &M->array.counters[M->pModelIdx << 2];
-      P->freqs[0] = 1 + M->alphaDen * ac[0];
-      P->freqs[1] = 1 + M->alphaDen * ac[1];
-      P->freqs[2] = 1 + M->alphaDen * ac[2];
-      P->freqs[3] = 1 + M->alphaDen * ac[3];
+      P->freqs[0] = 1 + aDen * ac[0];
+      P->freqs[1] = 1 + aDen * ac[1];
+      P->freqs[2] = 1 + aDen * ac[2];
+      P->freqs[3] = 1 + aDen * ac[3];
       P->sum = P->freqs[0] + P->freqs[1] + P->freqs[2] + P->freqs[3];
     break;
     default:

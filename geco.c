@@ -136,8 +136,9 @@ refNModels, INF *I){
 
       pos = &symbolBuffer[idx-1];
       for(n = 0 ; n < P->nModels ; ++n){
-        if(cModels[n]->am == 0)
+        if(cModels[n]->am == 0){
           GetPModelIdx(pos, cModels[n]);
+          }
         else{
           cModels[n]->correct.seq->buf[cModels[n]->correct.seq->idx] = sym;
           GetPModelIdx(cModels[n]->correct.seq->buf+cModels[n]->correct.seq->idx
@@ -159,7 +160,7 @@ refNModels, INF *I){
 
       AESym(sym, (int *)(MX->freqs), (int) MX->sum, Writter);
       #ifdef ESTIMATE
-      if(P->estim == 1)
+      if(P->estim != 0)
         fprintf(IAE, "%.3g\n", PModelSymbolNats(MX, sym));
       #endif
 
@@ -174,7 +175,7 @@ refNModels, INF *I){
           else
             UpdateCModelCounter(cModels[n], sym, cModels[n]->pModelIdx);
 
-          if(cModels[n]->ir == 1){                // REVERSE COMPLEMENTS
+          if(cModels[n]->ir != 0){                // REVERSE COMPLEMENTS
             irSym = GetPModelIdxIR(symbolBuffer+idx, cModels[n]);
             UpdateCModelCounter(cModels[n], irSym, cModels[n]->pModelIdxIR);
             }
@@ -362,6 +363,7 @@ int32_t main(int argc, char *argv[]){
     "                                                                       \n"
     "  -h                    give this help,                                \n"
     "  -x                    show several running examples,                 \n"
+    "  -s                    show GeCo compression levels,                  \n"
     "  -v                    verbose mode (more information),               \n"
     "  -V                    display version number,                        \n"
     "  -f                    force overwrite of output,                     \n"
@@ -415,6 +417,11 @@ int32_t main(int argc, char *argv[]){
     "ANY WARRANTY, to the extent permitted by law. Developed and Written by \n"
     "Diogo Pratas, Armando J. Pinho and Paulo J. S. G. Ferreira.\n\n", VERSION, 
     RELEASE);
+    return EXIT_SUCCESS;
+    }
+
+  if(ArgsState(0, p, argc, "-s")){
+    PrintLevels(); 
     return EXIT_SUCCESS;
     }
 

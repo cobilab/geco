@@ -92,7 +92,7 @@ void            FreeCModel            (CModel *);
 inline void     GetPModelIdx          (U8 *, CModel *);
 inline void     GetPModelIdxCorr      (U8 *, CModel *);
 inline U8       GetPModelIdxIR        (U8 *, CModel *);
-//inline U8       GetPModelIdxIRCorr       (U8 *, CModel *);
+inline U8       GetPModelIdxIRCorr    (U8 *, CModel *);
 void            CorrectCModel         (CModel *, PModel *, uint8_t);
 PModel          *CreatePModel         (U32);
 FloatPModel     *CreateFloatPModel    (U32);
