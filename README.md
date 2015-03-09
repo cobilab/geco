@@ -203,6 +203,20 @@ deeper context models (cache-hash context model).
    The decompressed files will be HS5.de, PT5.de and PA5.de
 </pre>
 
+If you are not interested in setting the template for each model, then use the levels mode:
+<pre>
+Level 1: -tm 13:1:0:0 -g 0.85 
+Level 2: -tm 4:1:0:0 -tm 13:20:1:0 -g 0.85 
+Level 3: -tm 1:1:0:0:0 -tm 4:1:0:0:0 -tm 6:1:0:0:0 -tm 8:1:0:0:0 -tm 11:10:1:0:0 -tm 14:10:0:1:1 -tm 14:50:1:0:0 -tm 18:30:1:6:1 -c 10 -g 0.88 CY 
+Level 4: -tm 4:1:0:0 -tm 6:1:1:0 -tm 13:20:1:0 -tm 18:20:1:3 -c 20 -g 0.9 
+Level 5: -tm 4:1:0:0 -tm 11:1:0:0 -tm 13:20:1:0 -tm 19:20:1:3 -c 30 -g 0.85 
+Level 6: -tm 4:1:0:0 -tm 6:1:0:0 -tm 9:1:0:0 -tm 11:1:0:0 -tm 13:20:1:0 -tm 19:20:1:3 -c 20 -g 0.8 
+Level 7: -tm 4:1:0:0 -tm 6:1:0:0 -tm 9:1:0:0 -tm 11:1:0:0 -tm 13:10:0:0 -tm 14:20:1:0 -tm 19:20:1:3 -c 20 -g 0.8 
+Level 8: -tm 1:1:0:0 -tm 4:1:0:0 -tm 6:1:0:0 -tm 9:1:0:0 -tm 11:1:0:0 -tm 13:10:0:0 -tm 14:20:1:0 -tm 19:20:1:3 -c 30 -g 0.8 
+Level 9: -tm 1:1:0:0 -tm 4:1:0:0 -tm 6:1:0:0 -tm 9:1:0:0 -tm 11:1:0:0 -tm 13:10:0:0 -tm 14:20:1:0 -tm 19:20:1:3 -c 40 -g 0.8 
+Level 10: -tm 1:1:0:0 -tm 4:1:0:0 -tm 6:1:0:0 -tm 9:1:0:0 -tm 11:1:0:0 -tm 13:10:0:0 -tm 14:20:1:0 -tm 19:20:1:3 -c 50 -g 0.8
+</pre>
+
 ## CITATION ##
 
 On using this software/method please cite:
