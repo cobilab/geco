@@ -2,7 +2,7 @@
 
 <br>
 <p align="center"><img src="/logo.png" 
-alt="EAGLE" width="350" height="100" border="0" /></p>
+alt="EAGLE" width="350" height="250" border="0" /></p>
 <br>
 
 Compress and analyze genomic sequences. GeCo can afford individual compression and referential compression. As a compression tool, GeCo is able to provide additional compression gains over several top specific tools, while as an analysis tool, GeCo is hable to determine absolute measures, namely for many distance computations, and local measures, such as the information content contained in each element, providing a way to quantify and locate specific genomic events.
