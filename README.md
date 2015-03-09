@@ -203,7 +203,11 @@ deeper context models (cache-hash context model).
    The decompressed files will be HS5.de, PT5.de and PA5.de
 </pre>
 
-If you are not interested in setting the template for each model, then use the levels mode:
+If you are not interested in setting the template for each model, then use the levels mode. To see the possible levels type:
+<pre>
+./GeCo -s
+</pre>
+This will print the following:
 <pre>
 Level 1: -tm 13:1:0:0 -g 0.85 
 Level 2: -tm 4:1:0:0 -tm 13:20:1:0 -g 0.85 
