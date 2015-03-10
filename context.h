@@ -41,7 +41,7 @@ HashTable;
 
 typedef struct{
   ACC        *counters;
-}
+  }
 Array;
 
 typedef struct{
@@ -50,7 +50,8 @@ typedef struct{
   uint8_t  *mask;    // BUFFER FOR FAILS & HITS
   uint64_t idx;      // AUXILIAR INDEX FOR UPDATE
   uint64_t idxRev;   // AUXILIAR INVERTED INDEX FOR UPDATE
-  uint32_t threshold;
+  uint32_t threshold;// DISCARD ABOVE THIS VALUE
+  uint32_t start;    // STARTING POINT FOR WINDOW: start=CTX-5
   }
 Correct;
 
