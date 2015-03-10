@@ -244,7 +244,7 @@ CModel *CreateCModel(U32 ctx, U32 aDen, U32 ir, U8 ref, U32 col, U32 am){
     M->correct.idxRev    = M->nPModels-1;
     M->correct.mask      = (uint8_t *) Calloc(BGUARD, sizeof(uint8_t));
     M->correct.threshold = am;
-    M->correct.start     = M->ctx > 6 ? M->ctx-6 : M->ctx;
+    M->correct.start     = M->ctx > WINDOW_SIZE ? M->ctx-WINDOW_SIZE : M->ctx;
     }
 
   Free(mult);
@@ -305,7 +305,7 @@ inline void GetPModelIdxCorr(U8 *p, CModel *M){
 
 void Fail(CModel *M){
   uint32_t x, fails = 0;
-  for(x = M->correct.start ; x < M->ctx ; ++x) // IN THE LAST 5
+  for(x = M->correct.start ; x < M->ctx ; ++x) // IN THE LAST 6
     if(M->correct.mask[x] != 0)
       ++fails;
   if(fails <= M->correct.threshold)

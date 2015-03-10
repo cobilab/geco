@@ -4,6 +4,7 @@
 #include "defs.h"
 #include "buffer.h"
 
+#define WINDOW_SIZE           6    // IT WILL ACCEPT X SUBSTITUTIONS IN 6
 #define ARRAY_MODE            0
 #define HASH_TABLE_MODE       1
 #define HASH_TABLE_BEGIN_CTX  15
