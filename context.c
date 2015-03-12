@@ -244,7 +244,7 @@ CModel *CreateCModel(U32 ctx, U32 aDen, U32 ir, U8 ref, U32 col, U32 am){
     M->correct.idxRev    = M->nPModels-1;
     M->correct.mask      = (uint8_t *) Calloc(BGUARD, sizeof(uint8_t));
     M->correct.threshold = am;
-    M->correct.start     = M->ctx > WINDOW_SIZE ? M->ctx-WINDOW_SIZE : M->ctx;
+    //M->correct.start     = M->ctx > WINDOW_SIZE ? M->ctx-WINDOW_SIZE : M->ctx;
     }
 
   Free(mult);
@@ -305,7 +305,7 @@ inline void GetPModelIdxCorr(U8 *p, CModel *M){
 
 void Fail(CModel *M){
   uint32_t x, fails = 0;
-  for(x = M->correct.start ; x < M->ctx ; ++x) // IN THE LAST 6
+  for(x = 0 ; x < M->ctx ; ++x)
     if(M->correct.mask[x] != 0)
       ++fails;
   if(fails <= M->correct.threshold)
@@ -327,16 +327,20 @@ void CorrectCModel(CModel *M, PModel *P, uint8_t sym){
   switch(best){
     case -2:  // IT IS A ZERO COUNTER [NOT SEEN BEFORE]
       if(M->correct.in != 0)
+        //Hit(M); 
         Fail(M);
     break;
     case -1:  // IT HAS AT LEAST TWO MAXIMUM FREQS [CONFUSION FREQS]
       if(M->correct.in != 0)
-        Fail(M);
+        Hit(M);
+        
     break;
     default:  // IT HAS ONE MAXIMUM FREQ
       if(M->correct.in == 0){ // IF IS OUT
         M->correct.in = 1;
-        memset(M->correct.mask, 0, M->ctx);
+        //memset(M->correct.mask, 0, M->ctx);
+        for(best = 0 ; best < M->ctx ; ++best)
+          M->correct.mask[best] = 0;
         }
       else{ // IF IS IN
         if(best == sym) Hit(M);

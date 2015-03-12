@@ -142,8 +142,8 @@ refNModels, INF *I){
           }
         else{
           cModels[n]->correct.seq->buf[cModels[n]->correct.seq->idx] = sym;
-          GetPModelIdx(cModels[n]->correct.seq->buf+cModels[n]->correct.seq->idx
-          -1, cModels[n]);
+          GetPModelIdx(cModels[n]->correct.seq->buf + 
+          cModels[n]->correct.seq->idx-1, cModels[n]);
           GetPModelIdxCorr(pos, cModels[n]);
           }
         ComputePModel(cModels[n], pModel[n]);
@@ -171,11 +171,10 @@ refNModels, INF *I){
         pModel[n]->freqs[sym] / pModel[n]->sum;
         cModelTotalWeight += cModelWeight[n];
         if(cModels[n]->ref == TARGET){
-          if(cModels[n]->am != 0)
-            UpdateCModelCounter(cModels[n], sym, cModels[n]->correct.idx);
-          else
+          if(cModels[n]->am == 0)
             UpdateCModelCounter(cModels[n], sym, cModels[n]->pModelIdx);
-
+          else
+            UpdateCModelCounter(cModels[n], sym, cModels[n]->correct.idx);
           if(cModels[n]->ir != 0){                // REVERSE COMPLEMENTS
             irSym = GetPModelIdxIR(symbolBuffer+idx, cModels[n]);
             UpdateCModelCounter(cModels[n], irSym, cModels[n]->pModelIdxIR);
@@ -334,6 +333,8 @@ CModel **LoadReference(Parameters *P)
 
   if(P->verbose == 1)
     fprintf(stderr, "Done!                          \n");  // SPACES ARE VALID  
+  else
+    fprintf(stderr, "\n");
 
   return cModels;
   }

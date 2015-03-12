@@ -47,12 +47,12 @@ Array;
 
 typedef struct{
   uint32_t in;
-  CBUF     *seq;     // BUFFER FOR EDITED SEQUENCE
-  uint8_t  *mask;    // BUFFER FOR FAILS & HITS
-  uint64_t idx;      // AUXILIAR INDEX FOR UPDATE
-  uint64_t idxRev;   // AUXILIAR INVERTED INDEX FOR UPDATE
-  uint32_t threshold;// DISCARD ABOVE THIS VALUE
-  uint32_t start;    // STARTING POINT FOR WINDOW: start=CTX-5
+  CBUF     *seq;      // BUFFER FOR EDITED SEQUENCE
+  uint8_t  *mask;     // BUFFER FOR FAILS & HITS
+  uint64_t idx;       // AUXILIAR INDEX FOR UPDATE
+  uint64_t idxRev;    // AUXILIAR INVERTED INDEX FOR UPDATE
+  uint32_t threshold; // DISCARD ABOVE THIS VALUE
+  uint32_t start;     // STARTING POINT FOR WINDOW: start=CTX-WINDOW_SIZE
   }
 Correct;
 
