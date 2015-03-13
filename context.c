@@ -333,14 +333,11 @@ void CorrectCModel(CModel *M, PModel *P, uint8_t sym){
     case -1:  // IT HAS AT LEAST TWO MAXIMUM FREQS [CONFUSION FREQS]
       if(M->correct.in != 0)
         Hit(M);
-        
     break;
     default:  // IT HAS ONE MAXIMUM FREQ
       if(M->correct.in == 0){ // IF IS OUT
         M->correct.in = 1;
-        //memset(M->correct.mask, 0, M->ctx);
-        for(best = 0 ; best < M->ctx ; ++best)
-          M->correct.mask[best] = 0;
+        memset(M->correct.mask, 0, M->ctx);
         }
       else{ // IF IS IN
         if(best == sym) Hit(M);

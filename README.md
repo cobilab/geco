@@ -109,9 +109,8 @@ Non-mandatory arguments:
                         with the respective information content. If    
                         the file is FASTA or FASTQ it will only use    
                         the "ACGT" (genomic) data,                   
+
   -r &#60FILE&#62             reference file ("-rm" are loaded here),      
-                                                                       
-Mandatory arguments:                                                   
                                                                        
   -rm &#60c&#62:&#60d&#62:&#60i&#62:&#60m&#62   reference context model (ex:-rm 13:100:0:0),   
   -rm &#60c&#62:&#60d>:&#60i&#62:&#60m&#62   reference context model (ex:-rm 18:1000:0:1),  
@@ -125,6 +124,8 @@ Mandatory arguments:
                         repeats (1 to use) and &#60m&#62 to the maximum      
                         allowed mutation on the context without        
                         being discarded (usefull in deep contexts),    
+
+Mandatory arguments:                                                   
                                                                        
   &#60FILE&#62                file to compress (last argument). For more     
                         files use splitting ":" characters.          
