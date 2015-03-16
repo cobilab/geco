@@ -8,8 +8,9 @@
 //
 #define LEVEL_1 " 1: -tm 13:1:0:0 -g 0.85 "
 #define LEVEL_2 " 2: -tm 4:1:0:0 -tm 11:10:0:0 -tm 13:20:1:0 -tm 19:20:1:2 -c 30 -g 0.85 "
-// HUMAN ASSEMBLED CY -> 1.231
-#define LEVEL_3 " 3: -tm 1:1:0:0 -tm 4:1:0:0 -tm 6:1:0:0 -tm 8:1:0:0 -tm 13:10:1:0 -tm 14:10:1:1 -tm 18:10:1:6 -tm 18:100:1:0 -c 9 -g 0.9 "
+// HUMAN ASSEMBLED CY -> 1.24 using 2.5 GB of memory
+#define LEVEL_3 " 3: -tm 1:1:0:0 -tm 4:1:0:0 -tm 6:1:0:0 -tm 8:1:0:0 -tm 12:10:0:0 -tm 13:20:1:1 -tm 18:100:1:6 -c 9 -g 0.90 "
+//#define LEVEL_3 " 3: -tm 1:1:0:0 -tm 4:1:0:0 -tm 6:1:0:0 -tm 8:1:0:0 -tm 13:10:1:0 -tm 14:10:1:1 -tm 18:10:1:6 -tm 18:100:1:0 -c 9 -g 0.9 "
 #define LEVEL_4 " 4: -tm 4:1:0:0 -tm 6:1:1:0 -tm 13:20:1:0 -tm 18:20:1:3 -c 20 -g 0.9 "
 
 // HUMAN ASSEMBLED GENOME (GRC) -> 4.8 G : 52m : 1.589 bpb

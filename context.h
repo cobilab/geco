@@ -90,21 +90,21 @@ FloatPModel;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-int32_t         BestId                (uint32_t *, uint32_t);
-void            Hit                   (CModel *);
-void            Fail                  (CModel *);
-void            FreeCModel            (CModel *);
-inline void     GetPModelIdx          (U8 *, CModel *);
-inline void     GetPModelIdxCorr      (U8 *, CModel *);
-inline U8       GetPModelIdxIR        (U8 *, CModel *);
-void            CorrectCModel         (CModel *, PModel *, uint8_t);
-PModel          *CreatePModel         (U32);
-FloatPModel     *CreateFloatPModel    (U32);
-void            ResetCModelIdx        (CModel *);
-void            UpdateCModelCounter   (CModel *, U32, U64);
-CModel          *CreateCModel         (U32, U32, U32, U8, U32, U32);
-void            ComputePModel         (CModel *, PModel *, uint64_t);
-double          PModelSymbolNats      (PModel *, U32);
+int32_t         BestId               (uint32_t *, uint32_t);
+void            Hit                  (CModel *);
+void            Fail                 (CModel *);
+void            FreeCModel           (CModel *);
+inline void     GetPModelIdx         (U8 *, CModel *);
+inline void     GetPModelIdxCorr     (U8 *, CModel *);
+inline U8       GetPModelIdxIR       (U8 *, CModel *);
+void            CorrectCModel        (CModel *, PModel *, uint8_t);
+PModel          *CreatePModel        (U32);
+FloatPModel     *CreateFloatPModel   (U32);
+void            ResetCModelIdx       (CModel *);
+void            UpdateCModelCounter  (CModel *, U32, U64);
+CModel          *CreateCModel        (U32, U32, U32, U8, U32, U32);
+void            ComputePModel        (CModel *, PModel *, uint64_t, uint32_t);
+double          PModelSymbolNats     (PModel *, U32);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

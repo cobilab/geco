@@ -342,9 +342,8 @@ void CorrectCModel(CModel *M, PModel *P, uint8_t sym){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void ComputePModel(CModel *M, PModel *P, uint64_t idx){
+void ComputePModel(CModel *M, PModel *P, uint64_t idx, uint32_t aDen){
   ACC *ac;
-  uint32_t aDen = M->alphaDen;
   switch(M->mode){
     case HASH_TABLE_MODE:
       GetHCCounters(&M->hTable, XHASH(idx), P, aDen);

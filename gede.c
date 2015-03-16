@@ -22,8 +22,8 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
   char        *name    = ReplaceSubStr(P->tar[id], ".co", ".de"); 
   FILE        *Writter = Fopen(name, "w");
   uint64_t    nSymbols = 0;
-  uint32_t    n, k;
-  double      *cModelWeight, cModelTotalWeight = 0, mA, mC, mG, mT;
+  uint32_t    n, k, cModel, totModels;
+  double      *cModelWeight, cModelTotalWeight = 0, mA, mC, mG, mT, factor;
   int32_t     idx = 0, idxOut = 0;
   uint8_t     *outBuffer, *symbolBuffer, sym = 0, irSym = 0, *pos;
   PModel      **pModel, *MX;
@@ -52,18 +52,26 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
     P[id].model[k].type  = ReadNBits( 1, Reader);
     }
 
-  nSymbols      = P[id].size;
-  pModel        = (PModel  **) Calloc(P[id].nModels, sizeof(PModel *));
+  // EXTRA MODELS DERIVED FROM EDITS
+  totModels = P[id].nModels;
   for(n = 0 ; n < P[id].nModels ; ++n)
+    if(P[id].model[n].edits != 0)
+      ++totModels;           
+
+  nSymbols      = P[id].size;
+  pModel        = (PModel  **) Calloc(totModels, sizeof(PModel *));
+  for(n = 0 ; n < totModels ; ++n)
     pModel[n]   = CreatePModel(ALPHABET_SIZE);
   MX            = CreatePModel(ALPHABET_SIZE);
-  outBuffer     = (uint8_t  *) Calloc(BUFFER_SIZE,          sizeof(uint8_t));
+  outBuffer     = (uint8_t  *) Calloc(BUFFER_SIZE, sizeof(uint8_t));
   symbolBuffer  = (uint8_t  *) Calloc(BUFFER_SIZE + BGUARD, sizeof(uint8_t));
   symbolBuffer += BGUARD;
-  cModelWeight  = (double   *) Calloc(P[id].nModels,        sizeof(double ));
+  cModelWeight  = (double   *) Calloc(totModels, sizeof(double ));
+
+  for(n = 0 ; n < totModels ; ++n)
+    cModelWeight[n] = 1.0 / totModels;
 
   for(n = 0 ; n < P[id].nModels ; ++n){
-    cModelWeight[n] = 1.0 / P[id].nModels;
     if(P[id].model[n].type == TARGET)
       cModels[n] = CreateCModel(P[id].model[n].ctx , P[id].model[n].den, 
       P[id].model[n].ir, TARGET, P[id].col, P[id].model[n].edits);
@@ -75,23 +83,31 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
     #endif
 
     mA = mC = mG = mT = 0;
+
+    n = 0;
     pos = &symbolBuffer[idx-1];
-    for(n = 0 ; n < P[id].nModels ; ++n){
-      if(cModels[n]->edits == 0){
-        GetPModelIdx(pos, cModels[n]);
-        ComputePModel(cModels[n], pModel[n], cModels[n]->pModelIdx);
-        }
-      else{
-        GetPModelIdx(pos, cModels[n]);
-        GetPModelIdxCorr(cModels[n]->SUBS.seq->buf+cModels[n]->SUBS.seq->idx-1, 
-        cModels[n]);
-        ComputePModel(cModels[n], pModel[n], cModels[n]->SUBS.idx);
-        }
-      double factor = cModelWeight[n] / pModel[n]->sum;
+    for(cModel = 0 ; cModel < P[id].nModels ; ++cModel){
+      GetPModelIdx(pos, cModels[cModel]);
+      ComputePModel(cModels[cModel], pModel[n], cModels[cModel]->pModelIdx,
+      cModels[cModel]->alphaDen);
+      factor = cModelWeight[n] / pModel[n]->sum;
       mA += (double) pModel[n]->freqs[0] * factor;
       mC += (double) pModel[n]->freqs[1] * factor;
       mG += (double) pModel[n]->freqs[2] * factor;
-      mT += (double) pModel[n]->freqs[3] * factor;    
+      mT += (double) pModel[n]->freqs[3] * factor;
+      if(cModels[cModel]->edits != 0){
+        ++n;
+        GetPModelIdxCorr(cModels[cModel]->SUBS.seq->buf+
+        cModels[cModel]->SUBS.seq->idx-1, cModels[cModel]);
+        ComputePModel(cModels[cModel], pModel[n], cModels[cModel]->SUBS.idx, 
+        10);
+        factor = cModelWeight[n] / pModel[n]->sum;
+        mA += (double) pModel[n]->freqs[0] * factor;
+        mC += (double) pModel[n]->freqs[1] * factor;
+        mG += (double) pModel[n]->freqs[2] * factor;
+        mT += (double) pModel[n]->freqs[3] * factor;
+        }
+      ++n;
       }
 
     MX->sum  = MX->freqs[0] = 1 + (unsigned) (mA * MX_PMODEL);
@@ -108,10 +124,13 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
         cModels[n]->SUBS.seq->buf[cModels[n]->SUBS.seq->idx] = sym;
 
     cModelTotalWeight = 0;
-    for(n = 0 ; n < P[id].nModels ; ++n){
+    for(n = 0 ; n < totModels ; ++n){
       cModelWeight[n] = Power(cModelWeight[n], P[id].gamma) * (double)
       pModel[n]->freqs[sym] / pModel[n]->sum;
       cModelTotalWeight += cModelWeight[n];
+      }
+
+    for(n = 0 ; n < P[id].nModels ; ++n){
       if(P[id].model[n].type == TARGET){
         UpdateCModelCounter(cModels[n], sym, cModels[n]->pModelIdx);
         if(cModels[n]->ir == 1){                // REVERSE COMPLEMENTS
@@ -121,10 +140,16 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
         }
       }
 
-    for(n = 0 ; n < P->nModels ; ++n){
+    for(n = 0 ; n < totModels ; ++n)
       cModelWeight[n] /= cModelTotalWeight; // RENORMALIZE THE WEIGHTS
-      if(cModels[n]->edits != 0)            // CORRECT CMODEL CONTEXTS
-        CorrectCModel(cModels[n], pModel[n], sym);
+
+    n = 0;
+    for(cModel = 0 ; cModel < P[id].nModels ; ++cModel){
+      if(cModels[cModel]->edits != 0){      // CORRECT CMODEL CONTEXTS
+        ++n;
+        CorrectCModel(cModels[cModel], pModel[n], sym);
+        }
+      ++n;
       }
 
     if(++idxOut == BUFFER_SIZE){

@@ -24,10 +24,10 @@ refNModels, INF *I){
   FILE        *Reader  = Fopen(P->tar[id], "r");
   char        *name    = concatenate(P->tar[id], ".co");
   FILE        *Writter = Fopen(name, "w");
-  uint32_t    n, k, idxPos;
+  uint32_t    n, k, cModel, totModels, idxPos;
   int32_t     idx = 0;
   uint64_t    compressed = 0, nSymbols = 0, nBases = 0;
-  double       *cModelWeight, cModelTotalWeight = 0, mA, mC, mG, mT;
+  double       *cModelWeight, cModelTotalWeight = 0, mA, mC, mG, mT, factor;
   uint8_t     *readerBuffer, *symbolBuffer, sym, irSym, *pos, type = 0, 
               header = 1, line = 0, dna = 0;
   PModel      **pModel, *MX;
@@ -63,17 +63,27 @@ refNModels, INF *I){
  
   _bytes_output = 0;
   nSymbols      = NBytesInFile(Reader);
-  pModel        = (PModel  **) Calloc(P->nModels, sizeof(PModel *));
-  for(n = 0 ; n < P->nModels ; ++n)
+  
+  // EXTRA MODELS DERIVED FROM EDITS
+  totModels = P->nModels;
+  for(n = 0 ; n < P->nModels ; ++n) 
+    if(P->model[n].edits != 0)
+      ++totModels;
+
+  pModel        = (PModel  **) Calloc(totModels, sizeof(PModel *));
+  for(n = 0 ; n < totModels ; ++n)
     pModel[n]   = CreatePModel(ALPHABET_SIZE);
   MX            = CreatePModel(ALPHABET_SIZE);
   readerBuffer  = (uint8_t *) Calloc(BUFFER_SIZE, sizeof(uint8_t));
   symbolBuffer  = (uint8_t *) Calloc(BUFFER_SIZE + BGUARD, sizeof(uint8_t));
   symbolBuffer += BGUARD;
-  cModelWeight  = (double   *) Calloc(P->nModels, sizeof(double));
+  cModelWeight  = (double   *) Calloc(totModels, sizeof(double));
+
+  for(n = 0 ; n < totModels ; ++n){
+    cModelWeight[n] = 1.0 / totModels;
+    }
 
   for(n = 0 ; n < P->nModels ; ++n){
-    cModelWeight[n] = 1.0 / P->nModels;
     if(P->model[n].type == TARGET){
       cModels[n] = CreateCModel(P->model[n].ctx, P->model[n].den, 
       P->model[n].ir, TARGET, P->col, P->model[n].edits);
@@ -135,24 +145,42 @@ refNModels, INF *I){
       symbolBuffer[idx] = sym = DNASymToNum(sym);
       mA = mC = mG = mT = 0;
 
+      n = 0;
       pos = &symbolBuffer[idx-1];
-      for(n = 0 ; n < P->nModels ; ++n){
-        if(cModels[n]->edits == 0){
-          GetPModelIdx(pos, cModels[n]);
-          ComputePModel(cModels[n], pModel[n], cModels[n]->pModelIdx);
-          }
-        else{
-          cModels[n]->SUBS.seq->buf[cModels[n]->SUBS.seq->idx] = sym;
-          GetPModelIdx(pos, cModels[n]);
-          GetPModelIdxCorr(cModels[n]->SUBS.seq->buf + 
-          cModels[n]->SUBS.seq->idx-1, cModels[n]);
-          ComputePModel(cModels[n], pModel[n], cModels[n]->SUBS.idx);
-          }
-        double factor = cModelWeight[n] / pModel[n]->sum;
+      for(cModel = 0 ; cModel < P->nModels ; ++cModel){
+        GetPModelIdx(pos, cModels[cModel]);
+        ComputePModel(cModels[cModel], pModel[n], cModels[cModel]->pModelIdx,
+        cModels[cModel]->alphaDen);
+        factor = cModelWeight[n] / pModel[n]->sum;
         mA += (double) pModel[n]->freqs[0] * factor;
         mC += (double) pModel[n]->freqs[1] * factor;
         mG += (double) pModel[n]->freqs[2] * factor;
         mT += (double) pModel[n]->freqs[3] * factor;
+        if(cModels[cModel]->edits != 0){
+          // SUBSTITUTIONS HANDLING: - - - - - - - - - - - - - - - - - - - - - -
+          ++n;
+          cModels[cModel]->SUBS.seq->buf[cModels[cModel]->SUBS.seq->idx] = sym;
+          GetPModelIdxCorr(cModels[cModel]->SUBS.seq->buf + 
+          cModels[cModel]->SUBS.seq->idx-1, cModels[cModel]);
+          ComputePModel(cModels[cModel], pModel[n], cModels[cModel]->SUBS.idx, 
+          10);
+          factor = cModelWeight[n] / pModel[n]->sum;
+          mA += (double) pModel[n]->freqs[0] * factor;
+          mC += (double) pModel[n]->freqs[1] * factor;
+          mG += (double) pModel[n]->freqs[2] * factor;
+          mT += (double) pModel[n]->freqs[3] * factor;
+          // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+          // TODO: ADDITIONS
+
+
+          // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+          // TODO: DELETIONS
+        
+
+
+          // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+          }
+        ++n;
         }
 
       MX->sum  = MX->freqs[0] = 1 + (unsigned) (mA * MX_PMODEL);
@@ -167,10 +195,13 @@ refNModels, INF *I){
       #endif
 
       cModelTotalWeight = 0;
-      for(n = 0 ; n < P->nModels ; ++n){
+      for(n = 0 ; n < totModels ; ++n){
         cModelWeight[n] = Power(cModelWeight[n], P->gamma) * (double) 
         pModel[n]->freqs[sym] / pModel[n]->sum;
         cModelTotalWeight += cModelWeight[n];
+        }
+
+      for(n = 0 ; n < P->nModels ; ++n){
         if(cModels[n]->ref == TARGET){
           UpdateCModelCounter(cModels[n], sym, cModels[n]->pModelIdx);
           if(cModels[n]->ir != 0){                // REVERSE COMPLEMENTS
@@ -180,10 +211,17 @@ refNModels, INF *I){
           }
         }
 
-      for(n = 0 ; n < P->nModels ; ++n){
+
+      for(n = 0 ; n < totModels ; ++n)
         cModelWeight[n] /= cModelTotalWeight; // RENORMALIZE THE WEIGHTS
-        if(cModels[n]->edits != 0)
-          CorrectCModel(cModels[n], pModel[n], sym);
+
+      n = 0;
+      for(cModel = 0 ; cModel < P->nModels ; ++cModel){
+        if(cModels[cModel]->edits != 0){
+          ++n;
+          CorrectCModel(cModels[cModel], pModel[n], sym);
+          }
+        ++n;
         }
 
       if(++idx == BUFFER_SIZE){
