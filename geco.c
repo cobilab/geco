@@ -251,7 +251,7 @@ refNModels, INF *I){
       ResetCModelIdx(cModels[n]);
     else
       FreeCModel(cModels[n]);
-  for(n = 0 ; n < P->nModels ; ++n){
+  for(n = 0 ; n < totModels ; ++n){
     Free(pModel[n]->freqs);
     Free(pModel[n]);
     }
