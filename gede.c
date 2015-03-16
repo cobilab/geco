@@ -23,10 +23,11 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
   FILE        *Writter = Fopen(name, "w");
   uint64_t    nSymbols = 0;
   uint32_t    n, k, cModel, totModels;
-  double      *cModelWeight, cModelTotalWeight = 0, mA, mC, mG, mT, factor;
+  double      *cModelWeight, cModelTotalWeight = 0;
   int32_t     idx = 0, idxOut = 0;
   uint8_t     *outBuffer, *symbolBuffer, sym = 0, irSym = 0, *pos;
   PModel      **pModel, *MX;
+  FloatPModel *PT;
   #ifdef PROGRESS
   uint64_t    i = 0;
   #endif
@@ -63,6 +64,7 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
   for(n = 0 ; n < totModels ; ++n)
     pModel[n]   = CreatePModel(ALPHABET_SIZE);
   MX            = CreatePModel(ALPHABET_SIZE);
+  PT            = CreateFloatPModel(ALPHABET_SIZE);
   outBuffer     = (uint8_t  *) Calloc(BUFFER_SIZE, sizeof(uint8_t));
   symbolBuffer  = (uint8_t  *) Calloc(BUFFER_SIZE + BGUARD, sizeof(uint8_t));
   symbolBuffer += BGUARD;
@@ -82,7 +84,7 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
     CalcProgress(P[id].size, ++i);
     #endif
 
-    mA = mC = mG = mT = 0;
+    memset((void *)PT->freqs, 0, ALPHABET_SIZE * sizeof(double));
 
     n = 0;
     pos = &symbolBuffer[idx-1];
@@ -90,30 +92,22 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
       GetPModelIdx(pos, cModels[cModel]);
       ComputePModel(cModels[cModel], pModel[n], cModels[cModel]->pModelIdx,
       cModels[cModel]->alphaDen);
-      factor = cModelWeight[n] / pModel[n]->sum;
-      mA += (double) pModel[n]->freqs[0] * factor;
-      mC += (double) pModel[n]->freqs[1] * factor;
-      mG += (double) pModel[n]->freqs[2] * factor;
-      mT += (double) pModel[n]->freqs[3] * factor;
+      ComputeWeightedFreqs(cModelWeight[n], pModel[n], PT);
       if(cModels[cModel]->edits != 0){
         ++n;
         GetPModelIdxCorr(cModels[cModel]->SUBS.seq->buf+
         cModels[cModel]->SUBS.seq->idx-1, cModels[cModel]);
         ComputePModel(cModels[cModel], pModel[n], cModels[cModel]->SUBS.idx, 
         10);
-        factor = cModelWeight[n] / pModel[n]->sum;
-        mA += (double) pModel[n]->freqs[0] * factor;
-        mC += (double) pModel[n]->freqs[1] * factor;
-        mG += (double) pModel[n]->freqs[2] * factor;
-        mT += (double) pModel[n]->freqs[3] * factor;
+        ComputeWeightedFreqs(cModelWeight[n], pModel[n], PT);
         }
       ++n;
       }
 
-    MX->sum  = MX->freqs[0] = 1 + (unsigned) (mA * MX_PMODEL);
-    MX->sum += MX->freqs[1] = 1 + (unsigned) (mC * MX_PMODEL);
-    MX->sum += MX->freqs[2] = 1 + (unsigned) (mG * MX_PMODEL);
-    MX->sum += MX->freqs[3] = 1 + (unsigned) (mT * MX_PMODEL);
+    MX->sum  = MX->freqs[0] = 1 + (unsigned) (PT->freqs[0] * MX_PMODEL);
+    MX->sum += MX->freqs[1] = 1 + (unsigned) (PT->freqs[1] * MX_PMODEL);
+    MX->sum += MX->freqs[2] = 1 + (unsigned) (PT->freqs[2] * MX_PMODEL);
+    MX->sum += MX->freqs[3] = 1 + (unsigned) (PT->freqs[3] * MX_PMODEL);
 
     symbolBuffer[idx] = sym = ArithDecodeSymbol(ALPHABET_SIZE, (int *) 
     MX->freqs, (int) MX->sum, Reader);
@@ -183,6 +177,7 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
     Free(pModel[n]);
     }
   Free(pModel);
+  Free(PT);
   Free(outBuffer);
   Free(symbolBuffer-BGUARD);
   fclose(Reader);

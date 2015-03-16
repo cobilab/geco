@@ -27,10 +27,11 @@ refNModels, INF *I){
   uint32_t    n, k, cModel, totModels, idxPos;
   int32_t     idx = 0;
   uint64_t    compressed = 0, nSymbols = 0, nBases = 0;
-  double       *cModelWeight, cModelTotalWeight = 0, mA, mC, mG, mT, factor;
+  double      *cModelWeight, cModelTotalWeight = 0;
   uint8_t     *readerBuffer, *symbolBuffer, sym, irSym, *pos, type = 0, 
               header = 1, line = 0, dna = 0;
   PModel      **pModel, *MX;
+  FloatPModel *PT;
   #ifdef PROGRESS
   uint64_t    i = 0;
   #endif
@@ -74,14 +75,14 @@ refNModels, INF *I){
   for(n = 0 ; n < totModels ; ++n)
     pModel[n]   = CreatePModel(ALPHABET_SIZE);
   MX            = CreatePModel(ALPHABET_SIZE);
+  PT            = CreateFloatPModel(ALPHABET_SIZE);
   readerBuffer  = (uint8_t *) Calloc(BUFFER_SIZE, sizeof(uint8_t));
   symbolBuffer  = (uint8_t *) Calloc(BUFFER_SIZE + BGUARD, sizeof(uint8_t));
   symbolBuffer += BGUARD;
   cModelWeight  = (double   *) Calloc(totModels, sizeof(double));
 
-  for(n = 0 ; n < totModels ; ++n){
+  for(n = 0 ; n < totModels ; ++n)
     cModelWeight[n] = 1.0 / totModels;
-    }
 
   for(n = 0 ; n < P->nModels ; ++n){
     if(P->model[n].type == TARGET){
@@ -143,7 +144,7 @@ refNModels, INF *I){
         continue;
 
       symbolBuffer[idx] = sym = DNASymToNum(sym);
-      mA = mC = mG = mT = 0;
+      memset((void *)PT->freqs, 0, ALPHABET_SIZE * sizeof(double));
 
       n = 0;
       pos = &symbolBuffer[idx-1];
@@ -151,11 +152,7 @@ refNModels, INF *I){
         GetPModelIdx(pos, cModels[cModel]);
         ComputePModel(cModels[cModel], pModel[n], cModels[cModel]->pModelIdx,
         cModels[cModel]->alphaDen);
-        factor = cModelWeight[n] / pModel[n]->sum;
-        mA += (double) pModel[n]->freqs[0] * factor;
-        mC += (double) pModel[n]->freqs[1] * factor;
-        mG += (double) pModel[n]->freqs[2] * factor;
-        mT += (double) pModel[n]->freqs[3] * factor;
+        ComputeWeightedFreqs(cModelWeight[n], pModel[n], PT);
         if(cModels[cModel]->edits != 0){
           // SUBSTITUTIONS HANDLING: - - - - - - - - - - - - - - - - - - - - - -
           ++n;
@@ -164,11 +161,7 @@ refNModels, INF *I){
           cModels[cModel]->SUBS.seq->idx-1, cModels[cModel]);
           ComputePModel(cModels[cModel], pModel[n], cModels[cModel]->SUBS.idx, 
           10);
-          factor = cModelWeight[n] / pModel[n]->sum;
-          mA += (double) pModel[n]->freqs[0] * factor;
-          mC += (double) pModel[n]->freqs[1] * factor;
-          mG += (double) pModel[n]->freqs[2] * factor;
-          mT += (double) pModel[n]->freqs[3] * factor;
+          ComputeWeightedFreqs(cModelWeight[n], pModel[n], PT);
           // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
           // TODO: ADDITIONS
 
@@ -183,10 +176,10 @@ refNModels, INF *I){
         ++n;
         }
 
-      MX->sum  = MX->freqs[0] = 1 + (unsigned) (mA * MX_PMODEL);
-      MX->sum += MX->freqs[1] = 1 + (unsigned) (mC * MX_PMODEL);
-      MX->sum += MX->freqs[2] = 1 + (unsigned) (mG * MX_PMODEL);
-      MX->sum += MX->freqs[3] = 1 + (unsigned) (mT * MX_PMODEL);
+      MX->sum  = MX->freqs[0] = 1 + (unsigned) (PT->freqs[0] * MX_PMODEL);
+      MX->sum += MX->freqs[1] = 1 + (unsigned) (PT->freqs[1] * MX_PMODEL);
+      MX->sum += MX->freqs[2] = 1 + (unsigned) (PT->freqs[2] * MX_PMODEL);
+      MX->sum += MX->freqs[3] = 1 + (unsigned) (PT->freqs[3] * MX_PMODEL);
 
       AESym(sym, (int *)(MX->freqs), (int) MX->sum, Writter);
       #ifdef ESTIMATE
@@ -210,7 +203,6 @@ refNModels, INF *I){
             }
           }
         }
-
 
       for(n = 0 ; n < totModels ; ++n)
         cModelWeight[n] /= cModelTotalWeight; // RENORMALIZE THE WEIGHTS
@@ -256,6 +248,7 @@ refNModels, INF *I){
     Free(pModel[n]);
     }
   Free(pModel);
+  Free(PT);
   Free(readerBuffer);
   Free(symbolBuffer-BGUARD);
   fclose(Reader);

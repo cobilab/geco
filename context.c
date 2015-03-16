@@ -342,7 +342,7 @@ void CorrectCModel(CModel *M, PModel *P, uint8_t sym){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void ComputePModel(CModel *M, PModel *P, uint64_t idx, uint32_t aDen){
+inline void ComputePModel(CModel *M, PModel *P, uint64_t idx, uint32_t aDen){
   ACC *ac;
   switch(M->mode){
     case HASH_TABLE_MODE:
@@ -360,6 +360,16 @@ void ComputePModel(CModel *M, PModel *P, uint64_t idx, uint32_t aDen){
     fprintf(stderr, "Error: not implemented!\n");
     exit(1);
     }
+  }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+inline void ComputeWeightedFreqs(double w, PModel *P, FloatPModel *PT){
+  double f = w / P->sum;
+  PT->freqs[0] += (double) P->freqs[0] * f;
+  PT->freqs[1] += (double) P->freqs[1] * f;
+  PT->freqs[2] += (double) P->freqs[2] * f;
+  PT->freqs[3] += (double) P->freqs[3] * f;
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
