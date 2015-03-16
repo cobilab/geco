@@ -48,7 +48,7 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
     P[id].model[k].ctx   = ReadNBits(16, Reader);
     P[id].model[k].den   = ReadNBits(16, Reader);
     P[id].model[k].ir    = ReadNBits( 1, Reader);
-    P[id].model[k].am    = ReadNBits( 8, Reader);
+    P[id].model[k].edits = ReadNBits( 8, Reader);
     P[id].model[k].type  = ReadNBits( 1, Reader);
     }
 
@@ -66,7 +66,7 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
     cModelWeight[n] = 1.0 / P[id].nModels;
     if(P[id].model[n].type == TARGET)
       cModels[n] = CreateCModel(P[id].model[n].ctx , P[id].model[n].den, 
-      P[id].model[n].ir, TARGET, P[id].col, P[id].model[n].am);
+      P[id].model[n].ir, TARGET, P[id].col, P[id].model[n].edits);
     }
 
   while(nSymbols--){
@@ -77,14 +77,16 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
     mA = mC = mG = mT = 0;
     pos = &symbolBuffer[idx-1];
     for(n = 0 ; n < P[id].nModels ; ++n){
-      if(cModels[n]->am == 0)
+      if(cModels[n]->edits == 0){
         GetPModelIdx(pos, cModels[n]);
-      else{
-        GetPModelIdx(cModels[n]->correct.seq->buf+
-        cModels[n]->correct.seq->idx-1, cModels[n]);
-        GetPModelIdxCorr(pos, cModels[n]);
+        ComputePModel(cModels[n], pModel[n], cModels[n]->pModelIdx);
         }
-      ComputePModel(cModels[n], pModel[n]);
+      else{
+        GetPModelIdx(pos, cModels[n]);
+        GetPModelIdxCorr(cModels[n]->SUBS.seq->buf+cModels[n]->SUBS.seq->idx-1, 
+        cModels[n]);
+        ComputePModel(cModels[n], pModel[n], cModels[n]->SUBS.idx);
+        }
       double factor = cModelWeight[n] / pModel[n]->sum;
       mA += (double) pModel[n]->freqs[0] * factor;
       mC += (double) pModel[n]->freqs[1] * factor;
@@ -102,8 +104,8 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
     outBuffer[idxOut] = NumToDNASym(sym);
 
     for(n = 0 ; n < P[id].nModels ; ++n)
-      if(cModels[n]->am != 0)
-        cModels[n]->correct.seq->buf[cModels[n]->correct.seq->idx] = sym;
+      if(cModels[n]->edits != 0)
+        cModels[n]->SUBS.seq->buf[cModels[n]->SUBS.seq->idx] = sym;
 
     cModelTotalWeight = 0;
     for(n = 0 ; n < P[id].nModels ; ++n){
@@ -111,10 +113,7 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
       pModel[n]->freqs[sym] / pModel[n]->sum;
       cModelTotalWeight += cModelWeight[n];
       if(P[id].model[n].type == TARGET){
-        if(cModels[n]->am != 0)
-          UpdateCModelCounter(cModels[n], sym, cModels[n]->correct.idx);
-        else
-          UpdateCModelCounter(cModels[n], sym, cModels[n]->pModelIdx);
+        UpdateCModelCounter(cModels[n], sym, cModels[n]->pModelIdx);
         if(cModels[n]->ir == 1){                // REVERSE COMPLEMENTS
           irSym = GetPModelIdxIR(symbolBuffer+idx, cModels[n]);
           UpdateCModelCounter(cModels[n], irSym, cModels[n]->pModelIdxIR);
@@ -124,7 +123,7 @@ void Decompress(Parameters *P, CModel **cModels, uint8_t id){
 
     for(n = 0 ; n < P->nModels ; ++n){
       cModelWeight[n] /= cModelTotalWeight; // RENORMALIZE THE WEIGHTS
-      if(cModels[n]->am != 0)               // CORRECT CMODEL CONTEXTS
+      if(cModels[n]->edits != 0)            // CORRECT CMODEL CONTEXTS
         CorrectCModel(cModels[n], pModel[n], sym);
       }
 
@@ -195,7 +194,7 @@ CModel **LoadReference(Parameters *P)
   for(n = 0 ; n < P->nModels ; ++n)
     if(P->model[n].type == REFERENCE)
       cModels[n] = CreateCModel(P->model[n].ctx, P->model[n].den,
-      P->model[n].ir, REFERENCE, P->col, P->model[n].am);
+      P->model[n].ir, REFERENCE, P->col, P->model[n].edits);
 
   sym = fgetc(Reader);
   switch(sym){
@@ -350,11 +349,11 @@ int32_t main(int argc, char *argv[]){
     P[n].nModels   = ReadNBits(16, Reader);
     P[n].model     = (ModelPar *) Calloc(P[n].nModels, sizeof(ModelPar));
     for(k = 0 ; k < P[n].nModels ; ++k){
-      P[n].model[k].ctx  = ReadNBits(16, Reader); 
-      P[n].model[k].den  = ReadNBits(16, Reader); 
-      P[n].model[k].ir   = ReadNBits( 1, Reader); 
-      P[n].model[k].am   = ReadNBits( 8, Reader); 
-      P[n].model[k].type = ReadNBits( 1, Reader);
+      P[n].model[k].ctx   = ReadNBits(16, Reader); 
+      P[n].model[k].den   = ReadNBits(16, Reader); 
+      P[n].model[k].ir    = ReadNBits( 1, Reader); 
+      P[n].model[k].edits = ReadNBits( 8, Reader); 
+      P[n].model[k].type  = ReadNBits( 1, Reader);
       if(P[n].model[k].type == 1)
         ++refNModels;
       }

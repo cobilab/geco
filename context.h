@@ -60,15 +60,20 @@ typedef struct{
   U32        alphaDen;                            // Denominator of alpha
   U32        maxCount;        // Counters /= 2 if one counter >= maxCount
   U64        multiplier;
-  U64        pModelIdx;
-  U64        pModelIdxIR;
-  Correct    correct;
   U8         ir;
   U8         ref;
-  U32        am;
   U32        mode;
   HashTable  hTable;
   Array      array;
+
+  // INDEXES 
+  U64        pModelIdx;
+  U64        pModelIdxIR;
+  // EDITS HANDLING:
+  U32        edits;
+  Correct    SUBS;
+  Correct    ADDS;
+  Correct    DELS;
   }
 CModel;
 
@@ -98,7 +103,7 @@ FloatPModel     *CreateFloatPModel    (U32);
 void            ResetCModelIdx        (CModel *);
 void            UpdateCModelCounter   (CModel *, U32, U64);
 CModel          *CreateCModel         (U32, U32, U32, U8, U32, U32);
-void            ComputePModel         (CModel *, PModel *);
+void            ComputePModel         (CModel *, PModel *, uint64_t);
 double          PModelSymbolNats      (PModel *, U32);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

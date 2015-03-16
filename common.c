@@ -389,20 +389,20 @@ char *ArgsString(char *def, char *arg[], uint32_t n, char *str)
 
 ModelPar ArgsUniqModel(char *str, uint8_t type)
   {
-  uint32_t  ctx, den, ir, am;
+  uint32_t  ctx, den, ir, edits;
   ModelPar  Mp;
 
-  if(sscanf(str, "%u:%u:%u:%u", &ctx, &den, &ir, &am) == 4){
-    if(ctx > MAX_CTX || ctx < MIN_CTX || den > MAX_DEN || den < MIN_DEN || am > 
-      256){
+  if(sscanf(str, "%u:%u:%u:%u", &ctx, &den, &ir, &edits) == 4){
+    if(ctx > MAX_CTX || ctx < MIN_CTX || den > MAX_DEN || den < MIN_DEN || 
+    edits > 256){
       fprintf(stderr, "Error: invalid model arguments range!\n");
       exit(1);
       }
-    Mp.ctx  = ctx;
-    Mp.den  = den;
-    Mp.ir   = ir;
-    Mp.am   = am;
-    Mp.type = type;
+    Mp.ctx   = ctx;
+    Mp.den   = den;
+    Mp.ir    = ir;
+    Mp.edits = edits;
+    Mp.type  = type;
     return Mp;
     }
   else{
@@ -410,39 +410,6 @@ ModelPar ArgsUniqModel(char *str, uint8_t type)
     exit(1);
     }
 
-  return Mp;
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-ModelPar ArgsModel(uint32_t def, char *arg[], uint32_t n, char *str){
-  uint32_t  ctx, den, ir, am;
-  ModelPar  Mp;
-
-  for( ; --n ; )
-    if(!strcmp(str, arg[n])){
-      if(sscanf(arg[n+1], "%u:%u:%u:%u", &ctx, &den, &ir, &am) == 4){
-        if(ctx > MAX_CTX || ctx < MIN_CTX || den > MAX_DEN || den < MIN_DEN){
-          fprintf(stderr, "Error: invalid model arguments range!\n");
-          exit(1);
-          }
-        Mp.ctx = ctx;
-        Mp.den = den;
-        Mp.ir  = ir;
-        Mp.am  = am;
-        return Mp;
-        }
-      else{
-        fprintf(stderr, "Error: unknown scheme for model arguments!\n");
-        exit(1);
-        }
-      }
-
-  // DEFAULT MODEL PARAMETERS
-  Mp.ctx = DEFAULT_CONTEXT  [def];
-  Mp.den = DEFAULT_ALPHADEN [def];
-  Mp.ir  = DEFAULT_IR       [def];
-  Mp.am  = DEFAULT_AM       [def];
   return Mp;
   }
 
@@ -588,7 +555,7 @@ void PrintArgs(Parameters *P)
       fprintf(stderr, "  [+] Inverted repeats ............. %s\n", 
       P->model[n].ir == 0 ? "no" : "yes");
       fprintf(stderr, "  [+] Allowable substitutions ...... %u\n",
-      P->model[n].am);
+      P->model[n].edits);
     }
 
   for(n = 0 ; n < P->nModels ; ++n)
@@ -602,7 +569,7 @@ void PrintArgs(Parameters *P)
       fprintf(stderr, "  [+] Inverted repeats ............. %s\n",
       P->model[n].ir == 0 ? "no" : "yes");
       fprintf(stderr, "  [+] Allowable substitutions ...... %u\n",
-      P->model[n].am);
+      P->model[n].edits);
       }
 
   fprintf(stderr, "Gamma .............................. %.2lf\n", P->gamma);

@@ -29,7 +29,7 @@ typedef struct{
   U32 ctx;
   U32 den;
   U32 ir;
-  U32 am;
+  U32 edits;
   U8  type;
   }
 ModelPar;

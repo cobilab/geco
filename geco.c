@@ -76,7 +76,7 @@ refNModels, INF *I){
     cModelWeight[n] = 1.0 / P->nModels;
     if(P->model[n].type == TARGET){
       cModels[n] = CreateCModel(P->model[n].ctx, P->model[n].den, 
-      P->model[n].ir, TARGET, P->col, P->model[n].am);
+      P->model[n].ir, TARGET, P->col, P->model[n].edits);
       }
     }
 
@@ -99,7 +99,7 @@ refNModels, INF *I){
     WriteNBits(cModels[n]->ctx,        16, Writter);
     WriteNBits(cModels[n]->alphaDen,   16, Writter);
     WriteNBits(cModels[n]->ir,          1, Writter);
-    WriteNBits(cModels[n]->am,          8, Writter);
+    WriteNBits(cModels[n]->edits,       8, Writter);
     WriteNBits(P->model[n].type,        1, Writter);
     }
 
@@ -137,16 +137,17 @@ refNModels, INF *I){
 
       pos = &symbolBuffer[idx-1];
       for(n = 0 ; n < P->nModels ; ++n){
-        if(cModels[n]->am == 0){
+        if(cModels[n]->edits == 0){
           GetPModelIdx(pos, cModels[n]);
+          ComputePModel(cModels[n], pModel[n], cModels[n]->pModelIdx);
           }
         else{
-          cModels[n]->correct.seq->buf[cModels[n]->correct.seq->idx] = sym;
-          GetPModelIdx(cModels[n]->correct.seq->buf + 
-          cModels[n]->correct.seq->idx-1, cModels[n]);
-          GetPModelIdxCorr(pos, cModels[n]);
+          cModels[n]->SUBS.seq->buf[cModels[n]->SUBS.seq->idx] = sym;
+          GetPModelIdx(pos, cModels[n]);
+          GetPModelIdxCorr(cModels[n]->SUBS.seq->buf + 
+          cModels[n]->SUBS.seq->idx-1, cModels[n]);
+          ComputePModel(cModels[n], pModel[n], cModels[n]->SUBS.idx);
           }
-        ComputePModel(cModels[n], pModel[n]);
         double factor = cModelWeight[n] / pModel[n]->sum;
         mA += (double) pModel[n]->freqs[0] * factor;
         mC += (double) pModel[n]->freqs[1] * factor;
@@ -171,10 +172,7 @@ refNModels, INF *I){
         pModel[n]->freqs[sym] / pModel[n]->sum;
         cModelTotalWeight += cModelWeight[n];
         if(cModels[n]->ref == TARGET){
-          if(cModels[n]->am == 0)
-            UpdateCModelCounter(cModels[n], sym, cModels[n]->pModelIdx);
-          else
-            UpdateCModelCounter(cModels[n], sym, cModels[n]->correct.idx);
+          UpdateCModelCounter(cModels[n], sym, cModels[n]->pModelIdx);
           if(cModels[n]->ir != 0){                // REVERSE COMPLEMENTS
             irSym = GetPModelIdxIR(symbolBuffer+idx, cModels[n]);
             UpdateCModelCounter(cModels[n], irSym, cModels[n]->pModelIdxIR);
@@ -184,7 +182,7 @@ refNModels, INF *I){
 
       for(n = 0 ; n < P->nModels ; ++n){
         cModelWeight[n] /= cModelTotalWeight; // RENORMALIZE THE WEIGHTS
-        if(cModels[n]->am != 0)
+        if(cModels[n]->edits != 0)
           CorrectCModel(cModels[n], pModel[n], sym);
         }
 
@@ -258,7 +256,7 @@ CModel **LoadReference(Parameters *P)
   for(n = 0 ; n < P->nModels ; ++n)
     if(P->model[n].type == REFERENCE)
       cModels[n] = CreateCModel(P->model[n].ctx, P->model[n].den, 
-      P->model[n].ir, REFERENCE, P->col, P->model[n].am);
+      P->model[n].ir, REFERENCE, P->col, P->model[n].edits);
 
   sym = fgetc(Reader);
   switch(sym){ 

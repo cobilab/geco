@@ -198,7 +198,7 @@ void UpdateCModelCounter(CModel *M, U32 sym, U64 im){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-CModel *CreateCModel(U32 ctx, U32 aDen, U32 ir, U8 ref, U32 col, U32 am){
+CModel *CreateCModel(U32 ctx, U32 aDen, U32 ir, U8 ref, U32 col, U32 edits){
   CModel *M = (CModel *) Calloc(1, sizeof(CModel));
   U64    prod = 1, *mult;
   U32    n;
@@ -213,7 +213,7 @@ CModel *CreateCModel(U32 ctx, U32 aDen, U32 ir, U8 ref, U32 col, U32 am){
   M->nPModels    = (U64) pow(ALPHABET_SIZE, ctx);
   M->ctx         = ctx;
   M->alphaDen    = aDen;
-  M->am          = am;
+  M->edits       = edits;
   M->pModelIdx   = 0;
   M->pModelIdxIR = M->nPModels - 1;
   M->ir          = ir  == 0 ? 0 : 1;
@@ -237,12 +237,12 @@ CModel *CreateCModel(U32 ctx, U32 aDen, U32 ir, U8 ref, U32 col, U32 am){
 
   M->multiplier = mult[M->ctx-1];
 
-  if(am != 0){
-    M->correct.seq       = CreateCBuffer(BUFFER_SIZE, BGUARD);
-    M->correct.in        = 0;
-    M->correct.idx       = 0;
-    M->correct.mask      = (uint8_t *) Calloc(BGUARD, sizeof(uint8_t));
-    M->correct.threshold = am;
+  if(edits != 0){
+    M->SUBS.seq       = CreateCBuffer(BUFFER_SIZE, BGUARD);
+    M->SUBS.in        = 0;
+    M->SUBS.idx       = 0;
+    M->SUBS.mask      = (uint8_t *) Calloc(BGUARD, sizeof(uint8_t));
+    M->SUBS.threshold = edits;
     }
 
   Free(mult);
@@ -289,7 +289,7 @@ inline void GetPModelIdx(U8 *p, CModel *M){
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 inline void GetPModelIdxCorr(U8 *p, CModel *M){
-  M->correct.idx = ((M->correct.idx-*(p-M->ctx)*M->multiplier)<<2)+*p;
+  M->SUBS.idx = ((M->SUBS.idx-*(p-M->ctx)*M->multiplier)<<2)+*p;
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -297,18 +297,18 @@ inline void GetPModelIdxCorr(U8 *p, CModel *M){
 void Fail(CModel *M){
   uint32_t x, fails = 0;
   for(x = 0 ; x < M->ctx ; ++x)
-    if(M->correct.mask[x] != 0)
+    if(M->SUBS.mask[x] != 0)
       ++fails;
-  if(fails <= M->correct.threshold)
-    ShiftBuffer(M->correct.mask, M->ctx, 1);
+  if(fails <= M->SUBS.threshold)
+    ShiftBuffer(M->SUBS.mask, M->ctx, 1);
   else 
-    M->correct.in = 0;
+    M->SUBS.in = 0;
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 void Hit(CModel *M){
-  ShiftBuffer(M->correct.mask, M->ctx, 0);
+  ShiftBuffer(M->SUBS.mask, M->ctx, 0);
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -317,41 +317,40 @@ void CorrectCModel(CModel *M, PModel *P, uint8_t sym){
   int32_t best = BestId(P->freqs, P->sum);
   switch(best){
     case -2:  // IT IS A ZERO COUNTER [NOT SEEN BEFORE]
-      if(M->correct.in != 0)
-        //Hit(M); 
+      if(M->SUBS.in != 0)
         Fail(M);
     break;
     case -1:  // IT HAS AT LEAST TWO MAXIMUM FREQS [CONFUSION FREQS]
-      if(M->correct.in != 0)
+      if(M->SUBS.in != 0)
         Hit(M);
     break;
     default:  // IT HAS ONE MAXIMUM FREQ
-      if(M->correct.in == 0){ // IF IS OUT
-        M->correct.in = 1;
-        memset(M->correct.mask, 0, M->ctx);
+      if(M->SUBS.in == 0){ // IF IS OUT
+        M->SUBS.in = 1;
+        memset(M->SUBS.mask, 0, M->ctx);
         }
       else{ // IF IS IN
         if(best == sym) Hit(M);
         else{
           Fail(M);
-          M->correct.seq->buf[M->correct.seq->idx] = best; 
+          M->SUBS.seq->buf[M->SUBS.seq->idx] = best; 
           } // UPDATE BUFFER WITH NEW SYMBOL
         }
     }
-  UpdateCBuffer(M->correct.seq);
+  UpdateCBuffer(M->SUBS.seq);
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void ComputePModel(CModel *M, PModel *P){
+void ComputePModel(CModel *M, PModel *P, uint64_t idx){
   ACC *ac;
   uint32_t aDen = M->alphaDen;
   switch(M->mode){
     case HASH_TABLE_MODE:
-      GetHCCounters(&M->hTable, XHASH(M->pModelIdx), P, aDen);
+      GetHCCounters(&M->hTable, XHASH(idx), P, aDen);
     break;
     case ARRAY_MODE:
-      ac = &M->array.counters[M->pModelIdx << 2];
+      ac = &M->array.counters[idx<<2];
       P->freqs[0] = 1 + aDen * ac[0];
       P->freqs[1] = 1 + aDen * ac[1];
       P->freqs[2] = 1 + aDen * ac[2];
