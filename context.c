@@ -241,10 +241,8 @@ CModel *CreateCModel(U32 ctx, U32 aDen, U32 ir, U8 ref, U32 col, U32 am){
     M->correct.seq       = CreateCBuffer(BUFFER_SIZE, BGUARD);
     M->correct.in        = 0;
     M->correct.idx       = 0;
-    M->correct.idxRev    = M->nPModels-1;
     M->correct.mask      = (uint8_t *) Calloc(BGUARD, sizeof(uint8_t));
     M->correct.threshold = am;
-    //M->correct.start     = M->ctx > WINDOW_SIZE ? M->ctx-WINDOW_SIZE : M->ctx;
     }
 
   Free(mult);
@@ -279,13 +277,6 @@ void ResetCModelIdx(CModel *M){
 
 inline U8 GetPModelIdxIR(U8 *p, CModel *M){
   M->pModelIdxIR = (M->pModelIdxIR>>2)+GetCompNum(*p)*M->multiplier;
-  return GetCompNum(*(p-M->ctx));
-  }
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-inline U8 GetPModelIdxIRCorr(U8 *p, CModel *M){
-  M->correct.idxRev = (M->correct.idxRev>>2)+GetCompNum(*p)*M->multiplier;
   return GetCompNum(*(p-M->ctx));
   }
 

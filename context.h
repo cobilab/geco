@@ -50,9 +50,7 @@ typedef struct{
   CBUF     *seq;      // BUFFER FOR EDITED SEQUENCE
   uint8_t  *mask;     // BUFFER FOR FAILS & HITS
   uint64_t idx;       // AUXILIAR INDEX FOR UPDATE
-  uint64_t idxRev;    // AUXILIAR INVERTED INDEX FOR UPDATE
   uint32_t threshold; // DISCARD ABOVE THIS VALUE
-  uint32_t start;     // STARTING POINT FOR WINDOW: start=CTX-WINDOW_SIZE
   }
 Correct;
 
@@ -94,7 +92,6 @@ void            FreeCModel            (CModel *);
 inline void     GetPModelIdx          (U8 *, CModel *);
 inline void     GetPModelIdxCorr      (U8 *, CModel *);
 inline U8       GetPModelIdxIR        (U8 *, CModel *);
-inline U8       GetPModelIdxIRCorr    (U8 *, CModel *);
 void            CorrectCModel         (CModel *, PModel *, uint8_t);
 PModel          *CreatePModel         (U32);
 FloatPModel     *CreateFloatPModel    (U32);
