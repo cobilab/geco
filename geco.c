@@ -24,7 +24,7 @@ refNModels, INF *I){
   FILE        *Reader  = Fopen(P->tar[id], "r");
   char        *name    = concatenate(P->tar[id], ".co");
   FILE        *Writter = Fopen(name, "w");
-  uint32_t    n, k, cModel, totModels, idxPos;
+  uint32_t    n, x, k, cModel, totModels, idxPos;
   int32_t     idx = 0;
   uint64_t    compressed = 0, nSymbols = 0, nBases = 0;
   double      *cModelWeight, cModelTotalWeight = 0;
@@ -69,7 +69,12 @@ refNModels, INF *I){
   totModels = P->nModels;
   for(n = 0 ; n < P->nModels ; ++n) 
     if(P->model[n].edits != 0)
-      ++totModels;
+//#define HIGHX
+#ifdef HIGHX
+      totModels += 2; // SUBS, ADDS
+#else
+      totModels += 1;
+#endif
 
   pModel        = (PModel  **) Calloc(totModels, sizeof(PModel *));
   for(n = 0 ; n < totModels ; ++n)
@@ -87,7 +92,7 @@ refNModels, INF *I){
   for(n = 0 ; n < P->nModels ; ++n){
     if(P->model[n].type == TARGET){
       cModels[n] = CreateCModel(P->model[n].ctx, P->model[n].den, 
-      P->model[n].ir, TARGET, P->col, P->model[n].edits);
+      P->model[n].ir, TARGET, P->col, P->model[n].edits, P->model[n].eDen);
       }
     }
 
@@ -111,6 +116,7 @@ refNModels, INF *I){
     WriteNBits(cModels[n]->alphaDen,   16, Writter);
     WriteNBits(cModels[n]->ir,          1, Writter);
     WriteNBits(cModels[n]->edits,       8, Writter);
+    WriteNBits(cModels[n]->SUBS.eDen,  32, Writter);
     WriteNBits(P->model[n].type,        1, Writter);
     }
 
@@ -153,26 +159,69 @@ refNModels, INF *I){
         ComputePModel(cModels[cModel], pModel[n], cModels[cModel]->pModelIdx,
         cModels[cModel]->alphaDen);
         ComputeWeightedFreqs(cModelWeight[n], pModel[n], PT);
+
+#ifdef HIGHX
+        ++n;
+        ComputePModel(cModels[cModel], pModel[n], cModels[cModel]->pModelIdx,
+        1);
+
+        uint8_t control = 0, maxi = 0, maxp = pModel[n]->freqs[0];
+        for(x = 1 ; x < 4 ; ++x)
+          if(pModel[n]->freqs[x] > maxp){
+            maxp = pModel[n]->freqs[x];
+            maxi = x;
+            }
+
+        for(x = 0 ; x < 4 ; ++x) 
+          if(maxi != x && maxp == pModel[n]->freqs[x]) 
+            control = 101;
+
+        if(control != 101){
+          for(x = 0 ; x < 4 ; ++x)
+            if(x == maxi)
+              pModel[n]->freqs[x] = 2000;
+            else
+              pModel[n]->freqs[x] = 1;        
+          }
+
+        ComputeWeightedFreqs(cModelWeight[n], pModel[n], PT);
+#endif
+
         if(cModels[cModel]->edits != 0){
           // SUBSTITUTIONS HANDLING: - - - - - - - - - - - - - - - - - - - - - -
           ++n;
           cModels[cModel]->SUBS.seq->buf[cModels[cModel]->SUBS.seq->idx] = sym;
-          GetPModelIdxCorr(cModels[cModel]->SUBS.seq->buf + 
-          cModels[cModel]->SUBS.seq->idx-1, cModels[cModel]);
+          cModels[cModel]->SUBS.idx = GetPModelIdxCorr(cModels[cModel]->SUBS.
+          seq->buf+cModels[cModel]->SUBS.seq->idx-1, cModels[cModel], cModels
+          [cModel]->SUBS.idx);
           ComputePModel(cModels[cModel], pModel[n], cModels[cModel]->SUBS.idx, 
-          10);
+          cModels[cModel]->SUBS.eDen);
           ComputeWeightedFreqs(cModelWeight[n], pModel[n], PT);
+/*
           // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
           // TODO: ADDITIONS
-
-
+          ++n;
+          cModels[cModel]->ADDS.idx2 = cModels[cModel]->ADDS.idx;
+          cModels[cModel]->ADDS.seq->buf[cModels[cModel]->ADDS.seq->idx] = sym;
+          cModels[cModel]->ADDS.idx = GetPModelIdxCorr(cModels[cModel]->ADDS.
+          seq->buf+cModels[cModel]->ADDS.seq->idx-1, cModels[cModel], cModels
+          [cModel]->ADDS.idx);
+          ComputePModel(cModels[cModel], pModel[n], cModels[cModel]->ADDS.idx, 100);
+          ComputeWeightedFreqs(cModelWeight[n], pModel[n], PT);
           // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
           // TODO: DELETIONS
-        
-
-
+          ++n;
+          cModels[cModel]->DELS.idx2 = cModels[cModel]->DELS.idx;
+          cModels[cModel]->DELS.seq->buf[cModels[cModel]->DELS.seq->idx] = sym;
+          cModels[cModel]->DELS.idx = GetPModelIdxCorr(cModels[cModel]->DELS.
+          seq->buf+cModels[cModel]->DELS.seq->idx-1, cModels[cModel], cModels
+          [cModel]->DELS.idx);
+          ComputePModel(cModels[cModel], pModel[n], cModels[cModel]->DELS.idx, 100);
+          ComputeWeightedFreqs(cModelWeight[n], pModel[n], PT);
           // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+*/
           }
+
         ++n;
         }
 
@@ -210,8 +259,9 @@ refNModels, INF *I){
       n = 0;
       for(cModel = 0 ; cModel < P->nModels ; ++cModel){
         if(cModels[cModel]->edits != 0){
-          ++n;
-          CorrectCModel(cModels[cModel], pModel[n], sym);
+          CorrectCModelSUBS(cModels[cModel], pModel[++n], sym);
+          //CorrectCModelADDS(cModels[cModel], pModel[++n], sym);
+          //CorrectCModelDELS(cModels[cModel], pModel[++n], sym);
           }
         ++n;
         }
@@ -287,7 +337,7 @@ CModel **LoadReference(Parameters *P)
   for(n = 0 ; n < P->nModels ; ++n)
     if(P->model[n].type == REFERENCE)
       cModels[n] = CreateCModel(P->model[n].ctx, P->model[n].den, 
-      P->model[n].ir, REFERENCE, P->col, P->model[n].edits);
+      P->model[n].ir, REFERENCE, P->col, P->model[n].edits, P->model[n].eDen);
 
   sym = fgetc(Reader);
   switch(sym){ 

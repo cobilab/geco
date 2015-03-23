@@ -12,7 +12,14 @@
 #define ESTIMATE
 #define PROGRESS
 #define FSEARCHMODE
-//#define PREC32B // UNCOMMENT: CONTEXTS UP TO 28 (IT WILL USE MORE MEMORY!)
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// UNCOMMENT ONLY ONE:
+//#define PREC32B // UNCOMMENT: CONTEXTS UP TO 28 (IT WILL USE HIGH MEMORY!)
+#define PREC16B // UNCOMMENT: CONTEXTS UP TO 20 (IT WILL USE MEDIUM MEMORY!)
+//#define PREC8B  // UNCOMMENT: CONTEXTS UP TO 16 (IT WILL USE LOW MEMORY!)
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 //#define SWAP
 
 typedef uint64_t ULL;
@@ -30,6 +37,7 @@ typedef struct{
   U32 den;
   U32 ir;
   U32 edits;
+  U32 eDen;
   U8  type;
   }
 ModelPar;
@@ -62,7 +70,7 @@ U32 garbage;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-#define BUFFER_SIZE            65535      
+#define BUFFER_SIZE            262144      
 #define PROGRESS_MIN           1000000
 #define DEF_VERSION            0
 #define DEF_EXAMPLE            0

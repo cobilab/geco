@@ -52,10 +52,12 @@ static void InsertKey(HashTable *H, U32 hi, U64 idx, U8 s){
   if(++H->index[hi] == H->maxC)
     H->index[hi] = 0;
 
-  #ifdef PREC32B
+  #if defined(PREC32B)
   H->entries[hi][H->index[hi]].key = (U32)(idx&0xffffffff);
-  #else
+  #elif defined(PREC16B)
   H->entries[hi][H->index[hi]].key = (U16)(idx&0xffff);
+  #else
+  H->entries[hi][H->index[hi]].key = (U8)(idx&0xff);
   #endif  
   H->entries[hi][H->index[hi]].counters = (0x01<<(s<<1));
   }
@@ -73,10 +75,12 @@ inline void GetFreqsFromHCC(HCC c, uint32_t a, PModel *P){
 
 void GetHCCounters(HashTable *H, U64 key, PModel *P, uint32_t a){
   U32 n, hIndex = key % HASH_SIZE;
-  #ifdef PREC32B
+  #if defined(PREC32B)
   U32 b = key & 0xffffffff;
-  #else
+  #elif defined(PREC16B)
   U16 b = key & 0xffff;
+  #else
+  U8  b = key & 0xff;
   #endif
 
   #ifdef FSEARCHMODE
@@ -147,10 +151,12 @@ void UpdateCModelCounter(CModel *M, U32 sym, U64 im){
   if(M->mode == HASH_TABLE_MODE){
     U8   counter;
     U32  s, hIndex = (idx = XHASH(idx)) % HASH_SIZE;
-    #ifdef PREC32B
+    #if defined(PREC32B)
     U32 b = idx & 0xffffffff;
-    #else
+    #elif defined(PREC16B)
     U16 b = idx & 0xffff;
+    #else
+    U8  b = idx & 0xff;
     #endif
 
     for(n = 0 ; n < M->hTable.maxC ; n++){
@@ -198,7 +204,8 @@ void UpdateCModelCounter(CModel *M, U32 sym, U64 im){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-CModel *CreateCModel(U32 ctx, U32 aDen, U32 ir, U8 ref, U32 col, U32 edits){
+CModel *CreateCModel(U32 ctx, U32 aDen, U32 ir, U8 ref, U32 col, U32 edits, 
+U32 eDen){
   CModel *M = (CModel *) Calloc(1, sizeof(CModel));
   U64    prod = 1, *mult;
   U32    n;
@@ -238,11 +245,27 @@ CModel *CreateCModel(U32 ctx, U32 aDen, U32 ir, U8 ref, U32 col, U32 edits){
   M->multiplier = mult[M->ctx-1];
 
   if(edits != 0){
+    // SUBSTITUTIONS
     M->SUBS.seq       = CreateCBuffer(BUFFER_SIZE, BGUARD);
     M->SUBS.in        = 0;
     M->SUBS.idx       = 0;
     M->SUBS.mask      = (uint8_t *) Calloc(BGUARD, sizeof(uint8_t));
     M->SUBS.threshold = edits;
+    M->SUBS.eDen      = eDen;
+    // ADDITIONS
+    M->ADDS.seq       = CreateCBuffer(BUFFER_SIZE, BGUARD);
+    M->ADDS.in        = 0;
+    M->ADDS.idx       = 0;
+    M->ADDS.idx2      = 0;
+    M->ADDS.mask      = (uint8_t *) Calloc(BGUARD, sizeof(uint8_t));
+    M->ADDS.threshold = edits;
+    // DELETIONS
+    M->DELS.seq       = CreateCBuffer(BUFFER_SIZE, BGUARD);
+    M->DELS.in        = 0;
+    M->DELS.idx       = 0;
+    M->DELS.idx2      = 0;
+    M->DELS.mask      = (uint8_t *) Calloc(BGUARD, sizeof(uint8_t));
+    M->DELS.threshold = 1; //edits;
     }
 
   Free(mult);
@@ -262,6 +285,21 @@ int32_t BestId(uint32_t *f, uint32_t sum){
       }
 
   for(x = 0 ; x < 4 ; ++x) if(best != x && max == f[x]) return -1;
+
+  return best;
+  }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+int32_t BestId2(uint32_t *f, uint32_t sum){
+  if(sum == 4) return -1; // ZERO COUNTERS
+
+  uint32_t x, best = 0, max = f[0];
+  for(x = 1 ; x < 4 ; ++x)
+    if(f[x] > max){
+      max = f[x];
+      best = x;
+      }
 
   return best;
   }
@@ -288,13 +326,13 @@ inline void GetPModelIdx(U8 *p, CModel *M){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-inline void GetPModelIdxCorr(U8 *p, CModel *M){
-  M->SUBS.idx = ((M->SUBS.idx-*(p-M->ctx)*M->multiplier)<<2)+*p;
+inline uint64_t GetPModelIdxCorr(U8 *p, CModel *M, uint64_t idx){
+  return (((idx-*(p-M->ctx)*M->multiplier)<<2)+*p);
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void Fail(CModel *M){
+void FailSUBS(CModel *M){
   uint32_t x, fails = 0;
   for(x = 0 ; x < M->ctx ; ++x)
     if(M->SUBS.mask[x] != 0)
@@ -307,22 +345,60 @@ void Fail(CModel *M){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void Hit(CModel *M){
+void FailADDS(CModel *M){
+  uint32_t x, fails = 0;
+  for(x = 0 ; x < M->ctx ; ++x)
+    if(M->ADDS.mask[x] != 0)
+      ++fails;
+  if(fails <= M->ADDS.threshold)
+    ShiftBuffer(M->ADDS.mask, M->ctx, 1);
+  else
+    M->ADDS.in = 0;
+  }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+void FailDELS(CModel *M){
+  uint32_t x, fails = 0;
+  for(x = 0 ; x < M->ctx ; ++x)
+    if(M->DELS.mask[x] != 0)
+      ++fails;
+  if(fails <= M->DELS.threshold)
+    ShiftBuffer(M->DELS.mask, M->ctx, 1);
+  else
+    M->DELS.in = 0;
+  }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+void HitSUBS(CModel *M){
   ShiftBuffer(M->SUBS.mask, M->ctx, 0);
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-void CorrectCModel(CModel *M, PModel *P, uint8_t sym){
+void HitADDS(CModel *M){
+  ShiftBuffer(M->ADDS.mask, M->ctx, 0);
+  }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+void HitDELS(CModel *M){
+  ShiftBuffer(M->DELS.mask, M->ctx, 0);
+  }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+void CorrectCModelSUBS(CModel *M, PModel *P, uint8_t sym){
   int32_t best = BestId(P->freqs, P->sum);
   switch(best){
     case -2:  // IT IS A ZERO COUNTER [NOT SEEN BEFORE]
       if(M->SUBS.in != 0)
-        Fail(M);
+        FailSUBS(M);
     break;
     case -1:  // IT HAS AT LEAST TWO MAXIMUM FREQS [CONFUSION FREQS]
       if(M->SUBS.in != 0)
-        Hit(M);
+        HitSUBS(M);
     break;
     default:  // IT HAS ONE MAXIMUM FREQ
       if(M->SUBS.in == 0){ // IF IS OUT
@@ -330,14 +406,82 @@ void CorrectCModel(CModel *M, PModel *P, uint8_t sym){
         memset(M->SUBS.mask, 0, M->ctx);
         }
       else{ // IF IS IN
-        if(best == sym) Hit(M);
+        if(best == sym) HitSUBS(M);
         else{
-          Fail(M);
+          FailSUBS(M);
           M->SUBS.seq->buf[M->SUBS.seq->idx] = best; 
           } // UPDATE BUFFER WITH NEW SYMBOL
         }
     }
   UpdateCBuffer(M->SUBS.seq);
+  }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+void CorrectCModelADDS(CModel *M, PModel *P, uint8_t sym){
+  int32_t status = 0, best = BestId(P->freqs, P->sum);
+  switch(best){
+    case -2:  // IT IS A ZERO COUNTER [NOT SEEN BEFORE]
+      //if(M->ADDS.in != 0){ FailADDS(M); status = 1; }
+      if(M->ADDS.in != 0){ HitADDS(M); status = 0; }
+    break;
+    case -1:  // IT HAS AT LEAST TWO MAXIMUM FREQS [CONFUSION FREQS]
+      if(M->ADDS.in != 0){ HitADDS(M); status = 0; }
+    break;
+    default:  // IT HAS ONE MAXIMUM FREQ
+      if(M->ADDS.in == 0){ // IF IS OUT
+        M->ADDS.in = 1;
+        memset(M->ADDS.mask, 0, M->ctx);
+        status = 0;
+        }
+      else{ // IF IS IN
+        if(best == sym){ HitADDS(M);  status = 0; }
+        else           { FailADDS(M); status = 1; }
+        }
+    }
+  if(status == 0) UpdateCBuffer(M->ADDS.seq); else M->ADDS.idx = M->ADDS.idx2;
+  }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+void CorrectCModelDELS(CModel *M, PModel *P, uint8_t sym){
+  int32_t status = 0, best = BestId2(P->freqs, P->sum);
+
+  if(M->DELS.in == 0 && best != -1){ // IF IS OUT
+    M->DELS.in = 1;
+    memset(M->DELS.mask, 0, M->ctx);
+    status = 0;
+    UpdateCBuffer(M->DELS.seq); 
+    return;    
+    }
+
+  if(best == -1)
+    best = 0;
+
+  if(M->DELS.in == 1){ // IF IS IN
+    if(best == sym){ 
+      HitDELS(M);  
+      status = 0; 
+      }
+    else{ 
+      FailDELS(M); 
+      status = 1; 
+      }
+    }
+  
+  if(status == 1){
+    M->DELS.idx = M->DELS.idx2;
+    M->DELS.seq->buf[M->DELS.seq->idx] = best;
+    M->DELS.idx = GetPModelIdxCorr(M->DELS.seq->buf+M->DELS.seq->idx-1, M, 
+    M->DELS.idx);
+    UpdateCBuffer(M->DELS.seq); 
+
+    M->DELS.seq->buf[M->DELS.seq->idx] = sym;
+    M->DELS.idx = GetPModelIdxCorr(M->DELS.seq->buf+M->DELS.seq->idx-1, M,
+    M->DELS.idx);
+    }
+
+  UpdateCBuffer(M->DELS.seq); 
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

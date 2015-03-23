@@ -7,6 +7,7 @@
 #include "defs.h"
 #include "mem.h"
 #include "common.h"
+#include "msg.h"
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -389,24 +390,31 @@ char *ArgsString(char *def, char *arg[], uint32_t n, char *str)
 
 ModelPar ArgsUniqModel(char *str, uint8_t type)
   {
-  uint32_t  ctx, den, ir, edits;
+  uint32_t  ctx, den, ir, edits, eDen;
   ModelPar  Mp;
 
-  if(sscanf(str, "%u:%u:%u:%u", &ctx, &den, &ir, &edits) == 4){
+  if(sscanf(str, "%u:%u:%u:%u/%u", &ctx, &den, &ir, &edits, &eDen ) == 5){
     if(ctx > MAX_CTX || ctx < MIN_CTX || den > MAX_DEN || den < MIN_DEN || 
-    edits > 256){
+    edits > 256 || eDen > 50000){
       fprintf(stderr, "Error: invalid model arguments range!\n");
+      ModelsExplanation();
+      fprintf(stderr, "\nPlease reset the models according to the above " 
+      "description.\n");
       exit(1);
       }
     Mp.ctx   = ctx;
     Mp.den   = den;
     Mp.ir    = ir;
     Mp.edits = edits;
+    Mp.eDen  = eDen;
     Mp.type  = type;
     return Mp;
     }
   else{
     fprintf(stderr, "Error: unknown scheme for model arguments!\n");
+    ModelsExplanation();
+    fprintf(stderr, "\nPlease reset the models according to the above "
+    "description.\n");
     exit(1);
     }
 
@@ -556,6 +564,9 @@ void PrintArgs(Parameters *P)
       P->model[n].ir == 0 ? "no" : "yes");
       fprintf(stderr, "  [+] Allowable substitutions ...... %u\n",
       P->model[n].edits);
+      if(P->model[n].edits != 0)
+        fprintf(stderr, "  [+] Substitutions alpha den ...... %u\n",
+        P->model[n].eDen);
     }
 
   for(n = 0 ; n < P->nModels ; ++n)
@@ -570,6 +581,9 @@ void PrintArgs(Parameters *P)
       P->model[n].ir == 0 ? "no" : "yes");
       fprintf(stderr, "  [+] Allowable substitutions ...... %u\n",
       P->model[n].edits);
+      if(P->model[n].edits != 0)
+        fprintf(stderr, "  [+] Substitutions alpha den ...... %u\n",
+        P->model[n].eDen);
       }
 
   fprintf(stderr, "Gamma .............................. %.2lf\n", P->gamma);
