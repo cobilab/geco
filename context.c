@@ -259,13 +259,15 @@ U32 eDen){
     M->ADDS.idx2      = 0;
     M->ADDS.mask      = (uint8_t *) Calloc(BGUARD, sizeof(uint8_t));
     M->ADDS.threshold = edits;
+    M->ADDS.eDen      = eDen;
     // DELETIONS
     M->DELS.seq       = CreateCBuffer(BUFFER_SIZE, BGUARD);
     M->DELS.in        = 0;
     M->DELS.idx       = 0;
     M->DELS.idx2      = 0;
     M->DELS.mask      = (uint8_t *) Calloc(BGUARD, sizeof(uint8_t));
-    M->DELS.threshold = 1; //edits;
+    M->DELS.threshold = edits;
+    M->DELS.eDen      = eDen;
     }
 
   Free(mult);
@@ -292,7 +294,6 @@ int32_t BestId(uint32_t *f, uint32_t sum){
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 int32_t BestId2(uint32_t *f, uint32_t sum){
-  if(sum == 4) return -1; // ZERO COUNTERS
 
   uint32_t x, best = 0, max = f[0];
   for(x = 1 ; x < 4 ; ++x)

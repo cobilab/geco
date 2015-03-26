@@ -109,6 +109,7 @@ inline void     GetPModelIdx         (U8 *, CModel *);
 inline U8       GetPModelIdxIR       (U8 *, CModel *);
 inline uint64_t GetPModelIdxCorr     (U8 *, CModel *, uint64_t);
 void            CorrectCModelSUBS    (CModel *, PModel *, uint8_t);
+void            CorrectCModelSUBS2    (CModel *, PModel *, uint8_t);
 void            CorrectCModelADDS    (CModel *, PModel *, uint8_t);
 void            CorrectCModelDELS    (CModel *, PModel *, uint8_t);
 PModel          *CreatePModel        (U32);
