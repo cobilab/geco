@@ -1,6 +1,6 @@
 # GeCo #
-&#60p align="center"&#62&#60img src="/logo.png" 
-alt="EAGLE" width="350" height="260" border="0" /&#62&#60/p&#62
+<p align="center"><img src="/logo.png" 
+alt="EAGLE" width="350" height="260" border="0" /></p>
 Compress and analyze genomic sequences. As a compression tool, GeCo is able to provide additional compression gains over several top specific tools, while as an analysis tool, GeCo is able to determine absolute measures, namely for many distance computations, and local measures, such as the information content contained in each element, providing a way to quantify and locate specific genomic events. GeCo can afford individual compression and referential compression.
 
 ## INSTALLATION ##
@@ -12,32 +12,32 @@ Cmake is needed for installation (http://www.cmake.org/). You can download it di
 Download, install and resolve conflicts.
 
 #### Linux 
-&#60pre&#62
+<pre>
 sudo apt-get install cmake
 wget https://github.com/pratas/geco/archive/master.zip
 unzip master.zip
 cd geco-master
 cmake .
 make
-&#60/pre&#62
+</pre>
 
 Alternatively, you can install (without cmake and only for linux) using
 
-&#60pre&#62
+<pre>
 wget https://github.com/pratas/geco/archive/master.zip
 unzip master.zip
 cd geco-master
 mv Makefile.linux Makefile
 make
-&#60/pre&#62
+</pre>
 
 #### OS X
 Install brew:
-&#60pre&#62
+<pre>
 ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)"
-&#60/pre&#62
+</pre>
 only if you do not have it. After type:
-&#60pre&#62
+<pre>
 brew install cmake
 brew install wget
 brew install gcc48
@@ -46,19 +46,19 @@ unzip master.zip
 cd geco-master
 cmake .
 make
-&#60/pre&#62
+</pre>
 With some versions you might need to create a link to cc or gcc (after the *brew install gcc48* command), namely
-&#60pre&#62
+<pre>
 sudo mv /usr/bin/gcc /usr/bin/gcc-old   # gcc backup
 sudo mv /usr/bin/cc /usr/bin/cc-old     # cc backup
 sudo ln -s /usr/bin/gcc-4.8 /usr/bin/gcc
 sudo ln -s /usr/bin/gcc-4.8 /usr/bin/cc
-&#60/pre&#62
+</pre>
 In some versions, the gcc48 is installed over /usr/local/bin, therefore you might need to substitute the last two commands by the following two:
-&#60pre&#62
+<pre>
 sudo ln -s /usr/local/bin/gcc-4.8 /usr/bin/gcc
 sudo ln -s /usr/local/bin/gcc-4.8 /usr/bin/cc
-&#60/pre&#62
+</pre>
 
 #### Windows
 
@@ -70,24 +70,24 @@ In windows use cygwin (https://www.cygwin.com/) and make sure that it is include
 
 Run GeCo using (lazy) level 5:
 
-&#60pre&#62
+<pre>
 ./GeCo -l 5 File.seq
-&#60/pre&#62
+</pre>
 
 ## PARAMETERS
 
 To see the possible options type
-&#60pre&#62
+<pre>
 ./GeCo
-&#60/pre&#62
+</pre>
 or
-&#60pre&#62
+<pre>
 ./GeCo -h
-&#60/pre&#62
+</pre>
 
 These will print the following options:
-&#60pre&#62
-&#60p&#62
+<pre>
+<p>
 Usage: GeCo [OPTION]... -r [FILE]  [FILE]:[...]                        
 Compress and analyze a genomic sequence (by default, compress).        
                                                                        
@@ -132,14 +132,14 @@ Mandatory arguments:
                         files use splitting ":" characters.          
                                                                        
 Report bugs to &#60{pratas,ap,pjf}@ua.pt&#62. 
-&#60/pre&#62
+</pre>
 
 To get several running examples type:
-&#60pre&#62
+<pre>
 ./GeCo -x
-&#60/pre&#62
+</pre>
 This will print the following:
-&#60pre&#62
+<pre>
 GeCo running examples:                                                 
                                                                        
 Considerations: the decompression is symmetric, therefore the same     
@@ -147,7 +147,7 @@ resources, namely time and memory will be used as in the compression.
 The memory used, after creating the models, will be constant, even in  
 deeper context models (cache-hash context model).                      
                                                                        
-[A]=&#62 Compressing sequences C(X) or C(X,Y):                            
+[A]=> Compressing sequences C(X) or C(X,Y):                            
                                                                        
 1) Compression of a human genome (using 5.8 GB RAM memory):            
    ./GeCo -tm 6:1:0:0 -tm 13:20:1:0 -tm 19:50:1:2 -c 35 -g 0.8 HS      
@@ -174,7 +174,7 @@ deeper context models (cache-hash context model).
    The decompressed file will be SRR957627.fastq.de                    
                                                                        
                                                                        
-[B]=&#62 Conditional (referential) exclusive compression C(X||Y):         
+[B]=> Conditional (referential) exclusive compression C(X||Y):         
                                                                        
 1) Compression of the gorilla (GG8) chromosome 8 given exclusively     
    information from chimpanzee (PT8):                                  
@@ -195,7 +195,7 @@ deeper context models (cache-hash context model).
    The decompressed files will be HS5.de, PT5.de and PA5.de            
                                                                        
                                                                        
-[C]=&#62 Conditional compression C(X|Y) [use reference and target]:       
+[C]=> Conditional compression C(X|Y) [use reference and target]:       
                                                                        
 1) Compression of a human (HS5), chimpanzee (PT5) and orangutan (PA5)  
    chromsomes 5 given the gorilla (GG17) chromosome 17 as reference:   
@@ -203,14 +203,14 @@ deeper context models (cache-hash context model).
    -rm 20:100:0:0 -c 20 -r GG17 HS5:PT5:PA5                            
    Decompression for B3: ./GeDe -r GG17 HS5.co:PT5.co:PA5.co           
    The decompressed files will be HS5.de, PT5.de and PA5.de
-&#60/pre&#62
+</pre>
 
 If you are not interested in setting the template for each model, then use the levels mode. To see the possible levels type:
-&#60pre&#62
+<pre>
 ./GeCo -s
-&#60/pre&#62
+</pre>
 This will print the following:
-&#60pre&#62
+<pre>
 Level 1: -tm 13:1:0:0 -g 0.85 
 Level 2: -tm 4:1:0:0 -tm 13:20:1:0 -g 0.85 
 Level 3: -tm 1:1:0:0 -tm 4:1:0:0 -tm 6:1:0:0 -tm 8:1:0:0 -tm 11:10:1:0 -tm 14:10:0:1 -tm 14:50:1:0 -tm 18:30:1:6 -c 10 -g 0.88 
@@ -221,7 +221,7 @@ Level 7: -tm 4:1:0:0 -tm 6:1:0:0 -tm 9:1:0:0 -tm 11:1:0:0 -tm 13:10:0:0 -tm 14:2
 Level 8: -tm 1:1:0:0 -tm 4:1:0:0 -tm 6:1:0:0 -tm 9:1:0:0 -tm 11:1:0:0 -tm 13:10:0:0 -tm 14:20:1:0 -tm 19:20:1:3 -c 30 -g 0.8 
 Level 9: -tm 1:1:0:0 -tm 4:1:0:0 -tm 6:1:0:0 -tm 9:1:0:0 -tm 11:1:0:0 -tm 13:10:0:0 -tm 14:20:1:0 -tm 19:20:1:3 -c 40 -g 0.8 
 Level 10: -tm 1:1:0:0 -tm 4:1:0:0 -tm 6:1:0:0 -tm 9:1:0:0 -tm 11:1:0:0 -tm 13:10:0:0 -tm 14:20:1:0 -tm 19:20:1:3 -c 50 -g 0.8
-&#60/pre&#62
+</pre>
 
 ## CITATION ##
 
@@ -240,7 +240,7 @@ For any issue let us know at [issues link](https://github.com/pratas/GeCo/issues
 GPL v2.
 
 For more information:
-&#60pre&#62http://www.gnu.org/licenses/gpl-2.0.html&#60/pre&#62
+<pre>http://www.gnu.org/licenses/gpl-2.0.html</pre>
 
                                                     
 
