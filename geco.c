@@ -126,7 +126,6 @@ refNModels, INF *I){
         if(sym == '>'){ header = 1; continue; }
         if(sym == '\n' && header == 1){ header = 0; continue; }
         if(sym == '\n') continue;
-        if(sym == 'N' ) continue;
         if(header == 1) continue;
         }
       else if(type == 2){ // IS A FAST[Q] FILE
@@ -137,12 +136,19 @@ refNModels, INF *I){
           case 3: if(sym == '\n'){ line = 0; dna = 0; } break;
           }
         if(dna == 0 || sym == '\n') continue;
-        if(dna == 1 && sym == 'N' ) continue;
         }
 
+      // REMOVE SPECIAL SYMBOLS [WINDOWS TXT ISSUES]
+      if(sym < 65 || sym > 122) continue; 
+
       // FINAL FILTERING DNA CONTENT
-      if(sym != 'A' && sym != 'C' && sym != 'G' && sym != 'T')
+      if(sym != 'A' && sym != 'C' && sym != 'G' && sym != 'T'){
+        #ifdef ESTIMATE
+        if(P->estim != 0)
+          fprintf(IAE, "0\n");
+        #endif
         continue;
+        }
 
       symbolBuffer[idx] = sym = DNASymToNum(sym);
       memset((void *)PT->freqs, 0, ALPHABET_SIZE * sizeof(double));
@@ -177,7 +183,7 @@ refNModels, INF *I){
       AESym(sym, (int *)(MX->freqs), (int) MX->sum, Writter);
       #ifdef ESTIMATE
       if(P->estim != 0)
-        fprintf(IAE, "%.3g\n", PModelSymbolNats(MX, sym));
+        fprintf(IAE, "%.3g\n", 2-(PModelSymbolNats(MX, sym) / M_LN2));
       #endif
 
       cModelTotalWeight = 0;
@@ -304,7 +310,6 @@ CModel **LoadReference(Parameters *P)
         if(sym == '>'){ header = 1; continue; }
         if(sym == '\n' && header == 1){ header = 0; continue; }
         if(sym == '\n') continue;
-        if(sym == 'N' ) continue;
         if(header == 1) continue;
         }
       else if(type == 2){ // IS A FAST[Q] FILE
@@ -315,7 +320,6 @@ CModel **LoadReference(Parameters *P)
           case 3: if(sym == '\n'){ line = 0; dna = 0; } break;
           }
         if(dna == 0 || sym == '\n') continue;
-        if(dna == 1 && sym == 'N' ) continue;
         }
 
       // FINAL FILTERING DNA CONTENT
