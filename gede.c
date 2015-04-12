@@ -328,6 +328,7 @@ int32_t main(int argc, char *argv[]){
   Parameters  *P;
   FILE        *Reader = NULL;
   uint8_t     help, verbose, force, nTar = 1;
+  clock_t     stop = 0, start = clock();
   
   if((help = ArgsState(DEFAULT_HELP, p, argc, "-h")) == 1 || argc < 2){
     fprintf(stderr,
@@ -432,6 +433,9 @@ int32_t main(int argc, char *argv[]){
     else
       Decompress(P, refModels, n);
     }
+
+  stop = clock();
+  fprintf(stderr, "Spent %g sec.\n", ((double)(stop-start))/CLOCKS_PER_SEC);
 
   return EXIT_SUCCESS;
   }

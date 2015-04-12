@@ -375,6 +375,7 @@ int32_t main(int argc, char *argv[]){
   int32_t     xargc = 0;
   uint32_t    n, k, refNModels, col;
   uint64_t    totalBytes, totalSize;
+  clock_t     stop = 0, start = clock();
   double      gamma;
   
   Parameters  *P;
@@ -507,6 +508,8 @@ int32_t main(int argc, char *argv[]){
   PrintHRBytes(totalBytes);
   fprintf(stderr, "), %.4g bpb, Distance: %.6g\n", ((8.0*totalBytes)/
   totalSize), (4.0*totalBytes)/totalSize);  
+  stop = clock();
+  fprintf(stderr, "Spent %g sec.\n", ((double)(stop-start))/CLOCKS_PER_SEC);
 
   return EXIT_SUCCESS;
   }
