@@ -84,7 +84,7 @@ void PrintHRBytes(int64_t b){
   else{
   e = log(b)/log(u);
   s = (double)b/pow((double)u, (double)e);
-  fprintf(stderr, "%.1lf %cB", s, t[e-1]);
+  fprintf(stdout, "%.1lf %cB", s, t[e-1]);
   }
 }
 

@@ -37,7 +37,7 @@ refNModels, INF *I){
   #endif
 
   if(P->verbose)
-    fprintf(stderr, "Analyzing data and creating models ...\n");
+    fprintf(stdout, "Analyzing data and creating models ...\n");
 
   #ifdef ESTIMATE
   FILE *IAE = NULL;
@@ -92,8 +92,8 @@ refNModels, INF *I){
     }
 
   if(P->verbose){
-    fprintf(stderr, "Done!\n");
-    fprintf(stderr, "Compressing target sequence %d [bases: %"PRIu64"] ...\n", 
+    fprintf(stdout, "Done!\n");
+    fprintf(stdout, "Compressing target sequence %d [bases: %"PRIu64"] ...\n", 
     id + 1, nBases);
     }
 
@@ -252,7 +252,7 @@ refNModels, INF *I){
   fclose(Reader);
 
   if(P->verbose == 1)
-    fprintf(stderr, "Done!                          \n");  // SPACES ARE VALID 
+    fprintf(stdout, "Done!                          \n");  // SPACES ARE VALID 
 
   I[id].bytes = _bytes_output;
   I[id].size  = compressed;
@@ -276,7 +276,7 @@ CModel **LoadReference(Parameters *P)
   #endif
 
   if(P->verbose == 1)
-    fprintf(stderr, "Building reference model ...\n");
+    fprintf(stdout, "Building reference model ...\n");
 
   readerBuffer  = (uint8_t *) Calloc(BUFFER_SIZE + 1, sizeof(uint8_t));
   symbolBuffer  = (uint8_t *) Calloc(BUFFER_SIZE + BGUARD+1, sizeof(uint8_t));
@@ -357,9 +357,9 @@ CModel **LoadReference(Parameters *P)
   fclose(Reader);
 
   if(P->verbose == 1)
-    fprintf(stderr, "Done!                          \n");  // SPACES ARE VALID  
+    fprintf(stdout, "Done!                          \n");  // SPACES ARE VALID  
   else
-    fprintf(stderr, "\n");
+    fprintf(stdout, "\n");
 
   return cModels;
   }
@@ -498,19 +498,19 @@ int32_t main(int argc, char *argv[]){
 
   if(P->nTar > 1)
     for(n = 0 ; n < P->nTar ; ++n){
-      fprintf(stderr, "File %d compressed bytes: %"PRIu64" (", n+1, (uint64_t) 
+      fprintf(stdout, "File %d compressed bytes: %"PRIu64" (", n+1, (uint64_t) 
       I[n].bytes);
       PrintHRBytes(I[n].bytes);
-      fprintf(stderr, ") , Normalized Dissimilarity Rate: %.6g\n", 
+      fprintf(stdout, ") , Normalized Dissimilarity Rate: %.6g\n", 
       (8.0*I[n].bytes)/(2*I[n].size));
       }
 
-  fprintf(stderr, "Total bytes: %"PRIu64" (", totalBytes);
+  fprintf(stdout, "Total bytes: %"PRIu64" (", totalBytes);
   PrintHRBytes(totalBytes);
-  fprintf(stderr, "), %.4g bpb, Normalized Dissimilarity Rate: %.6g\n", 
+  fprintf(stdout, "), %.4g bpb, Normalized Dissimilarity Rate: %.6g\n", 
   ((8.0*totalBytes)/totalSize), (4.0*totalBytes)/totalSize);  
   stop = clock();
-  fprintf(stderr, "Spent %g sec.\n", ((double)(stop-start))/CLOCKS_PER_SEC);
+  fprintf(stdout, "Spent %g sec.\n", ((double)(stop-start))/CLOCKS_PER_SEC);
 
   return EXIT_SUCCESS;
   }
