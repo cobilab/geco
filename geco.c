@@ -501,7 +501,8 @@ int32_t main(int argc, char *argv[]){
       fprintf(stderr, "File %d compressed bytes: %"PRIu64" (", n+1, (uint64_t) 
       I[n].bytes);
       PrintHRBytes(I[n].bytes);
-      fprintf(stderr, ") , Distance: %.6g\n", (8.0*I[n].bytes)/(2*I[n].size));
+      fprintf(stderr, ") , Normalized Dissimilarity Rate: %.6g\n", 
+      (8.0*I[n].bytes)/(2*I[n].size));
       }
 
   fprintf(stderr, "Total bytes: %"PRIu64" (", totalBytes);
