@@ -359,7 +359,7 @@ CModel **LoadReference(Parameters *P)
   if(P->verbose == 1)
     fprintf(stdout, "Done!                          \n");  // SPACES ARE VALID  
   else
-    fprintf(stdout, "\n");
+    fprintf(stdout, "                               \n");  // SPACES ARE VALID
 
   return cModels;
   }

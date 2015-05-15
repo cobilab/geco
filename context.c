@@ -120,16 +120,16 @@ void GetHCCounters(HashTable *H, U64 key, PModel *P, uint32_t a){
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 PModel *CreatePModel(U32 n){
-  PModel *P = (PModel *) Malloc(sizeof(PModel));
-  P->freqs  = (U32    *) Malloc(n* sizeof(U32));
+  PModel *P = (PModel *) Calloc(1, sizeof(PModel));
+  P->freqs  = (U32    *) Calloc(n, sizeof(U32));
   return P;
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 FloatPModel *CreateFloatPModel(U32 n){
-  FloatPModel *F = (FloatPModel *) Malloc(sizeof(FloatPModel));
-  F->freqs = (double *) Malloc(n * sizeof(double));
+  FloatPModel *F = (FloatPModel *) Calloc(1, sizeof(FloatPModel));
+  F->freqs = (double *) Calloc(n, sizeof(double));
   return F;
   }
 
