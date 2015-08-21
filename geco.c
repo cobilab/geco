@@ -24,7 +24,7 @@ refNModels, INF *I){
   FILE        *Reader  = Fopen(P->tar[id], "r");
   char        *name    = concatenate(P->tar[id], ".co");
   FILE        *Writter = Fopen(name, "w");
-  uint32_t    n, x, k, cModel, totModels, idxPos;
+  uint32_t    n, k, cModel, totModels, idxPos;
   int32_t     idx = 0;
   uint64_t    compressed = 0, nSymbols = 0, nBases = 0;
   double      *cModelWeight, cModelTotalWeight = 0;
