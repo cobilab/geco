@@ -508,7 +508,7 @@ int32_t main(int argc, char *argv[]){
   fprintf(stdout, "Total bytes: %"PRIu64" (", totalBytes);
   PrintHRBytes(totalBytes);
   fprintf(stdout, "), %.4g bpb, Normalized Dissimilarity Rate: %.6g\n", 
-  ((totalBytes)/totalSize), (2.0*totalBytes)/totalSize);  
+  ((8.0*totalBytes)/totalSize), (2.0*totalBytes)/totalSize);  
   stop = clock();
   fprintf(stdout, "Spent %g sec.\n", ((double)(stop-start))/CLOCKS_PER_SEC);
 
