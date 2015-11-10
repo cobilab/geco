@@ -183,7 +183,8 @@ refNModels, INF *I){
       AESym(sym, (int *)(MX->freqs), (int) MX->sum, Writter);
       #ifdef ESTIMATE
       if(P->estim != 0)
-        fprintf(IAE, "%.3g\n", 2-(PModelSymbolNats(MX, sym) / M_LN2));
+        //fprintf(IAE, "%.3g\n", 2-(PModelSymbolNats(MX, sym) / M_LN2));
+        fprintf(IAE, "%.3g\n", PModelSymbolNats(MX, sym) / M_LN2);
       #endif
 
       cModelTotalWeight = 0;
@@ -225,6 +226,7 @@ refNModels, INF *I){
   finish_encode(Writter);
   doneoutputtingbits(Writter);
   fclose(Writter);
+
 
   #ifdef ESTIMATE
   if(P->estim == 1){

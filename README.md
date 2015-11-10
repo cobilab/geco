@@ -229,9 +229,8 @@ Level 10: -tm 1:1:0:0/0 -tm 4:1:0:0/0 -tm 6:1:0:0/0 -tm 9:1:0:0/0 -tm 11:1:0:0/0
 
 On using this software/method please cite:
 
-Armando J. Pinho, Diogo Pratas, and Paulo J.S.G. Ferreira. "Bacteria DNA sequence compression using a mixture of finite-context models." Statistical Signal Processing Workshop (SSP), 2011 IEEE, pp.125,128, 28-30 June 2011.
-
-DOI: 10.1109/SSP.2011.5967637
+PAPER: Submitted to DCC;
+DOI: to add;
 
 ## ISSUES ##
 
