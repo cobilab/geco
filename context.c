@@ -16,6 +16,25 @@ static uint64_t XHASH(uint64_t x){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+static uint64_t YHASH(uint64_t y){
+  return (y * 786491 + 216617) % 66719476787;
+  }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+static uint64_t ZHASH(uint64_t z){
+  z = (~z) + (z << 21);
+  z = z    ^ (z >> 24);
+  z = (z   + (z << 3)) + (z << 8);
+  z = z    ^ (z >> 14);
+  z = (z   + (z << 2)) + (z << 4);
+  z = z    ^ (z >> 28);
+  z = z    + (z << 31);
+  return z;
+  }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 static void InitHashTable(CModel *M, U32 c){ 
   uint32_t k;
   M->hTable.maxC    = c;
@@ -150,7 +169,7 @@ void UpdateCModelCounter(CModel *M, U32 sym, U64 im){
 
   if(M->mode == HASH_TABLE_MODE){
     U8   counter;
-    U32  s, hIndex = (idx = XHASH(idx)) % HASH_SIZE;
+    U32  s, hIndex = (idx = ZHASH(idx)) % HASH_SIZE;
     #if defined(PREC32B)
     U32 b = idx & 0xffffffff;
     #elif defined(PREC16B)
@@ -491,7 +510,7 @@ inline void ComputePModel(CModel *M, PModel *P, uint64_t idx, uint32_t aDen){
   ACC *ac;
   switch(M->mode){
     case HASH_TABLE_MODE:
-      GetHCCounters(&M->hTable, XHASH(idx), P, aDen);
+      GetHCCounters(&M->hTable, ZHASH(idx), P, aDen);
     break;
     case ARRAY_MODE:
       ac = &M->array.counters[idx<<2];
