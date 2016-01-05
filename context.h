@@ -20,8 +20,8 @@
 #endif
 
 typedef U16  ACC;                  // Size of context counters for arrays
-typedef U8   HCC;             // Size of context counters for hash tables
-typedef U16  ENTMAX;                // Entry size (nKeys for each hIndex)
+typedef U16  HCC;             // Size of context counters for hash tables
+typedef U8   ENTMAX;                // Entry size (nKeys for each hIndex)
 typedef HCC  HCCounters[4];
 
 typedef struct{
