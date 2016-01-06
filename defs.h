@@ -6,6 +6,8 @@
 #include <inttypes.h>
 #include <unistd.h>
 
+#pragma pack(1)
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // RUNNING OPTIMIZATIONS : MEMORY / SPEED
 
