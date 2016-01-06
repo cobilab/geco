@@ -168,7 +168,7 @@ void UpdateCModelCounter(CModel *M, U32 sym, U64 im){
   U64 idx = im;
 
   if(M->mode == HASH_TABLE_MODE){
-    U16 counter;
+    U16 counter, sc;
     U32 s, hIndex = (idx = ZHASH(idx)) % HASH_SIZE;
     #if defined(PREC32B)
     U32 b = idx & 0xffffffff;
@@ -178,28 +178,22 @@ void UpdateCModelCounter(CModel *M, U32 sym, U64 im){
     U8  b = idx & 0xff;
     #endif
 
-    for(n = 0 ; n < M->hTable.maxC ; n++){
+    for(n = 0 ; n < M->hTable.maxC ; ++n){
       if(M->hTable.entries[hIndex][n].key == b){
-        counter = (M->hTable.entries[hIndex][n].counters>>(sym<<2))&0x0f;
-        if(counter == 15){
-          for(s = 0 ; s < 4 ; ++s){
+        sc = (M->hTable.entries[hIndex][n].counters>>(sym<<2))&0x0f;
+        if(sc == 15){ // IT REACHES THE MAXIMUM COUNTER: RENORMALIZE
+          for(s = 0 ; s < 4 ; ++s){ // RENORMALIZE EACH AND STORE
             counter = ((M->hTable.entries[hIndex][n].counters>>(s<<2))&0x0f)>>1;
             M->hTable.entries[hIndex][n].counters &= ~(0x0f<<(s<<2));
             M->hTable.entries[hIndex][n].counters |= (counter<<(s<<2));
             }
-
-          counter = (M->hTable.entries[hIndex][n].counters>>(sym<<2))&0x0f;
-          ++counter;
-          M->hTable.entries[hIndex][n].counters &= ~(0x0f<<(sym<<2));
-          M->hTable.entries[hIndex][n].counters |= (counter<<(sym<<2));
-          return;
           }
-        else{ // THERE IS STILL SPACE FOR INCREMENT COUNTER
-          ++counter;
-          M->hTable.entries[hIndex][n].counters &= ~(0x0f<<(sym<<2));
-          M->hTable.entries[hIndex][n].counters |= (counter<<(sym<<2));
-          return;
-          }
+        // GET, INCREMENT AND STORE COUNTER
+        sc = (M->hTable.entries[hIndex][n].counters>>(sym<<2))&0x0f;
+        ++sc;
+        M->hTable.entries[hIndex][n].counters &= ~(0x0f<<(sym<<2));
+        M->hTable.entries[hIndex][n].counters |= (sc<<(sym<<2));
+        return;
         }
       }
     InsertKey(&M->hTable, hIndex, b, sym); // KEY NOT FOUND: WRITE ON OLDEST
