@@ -115,6 +115,8 @@ refNModels, INF *I){
     WriteNBits(P->model[n].type,        1, Writter);
     }
 
+  I[id].header = _bytes_output;
+
   while((k = fread(readerBuffer, 1, BUFFER_SIZE, Reader)))
     for(idxPos = 0 ; idxPos < k ; ++idxPos){
       #ifdef PROGRESS
@@ -376,7 +378,7 @@ int32_t main(int argc, char *argv[]){
   CModel      **refModels;
   int32_t     xargc = 0;
   uint32_t    n, k, refNModels, col;
-  uint64_t    totalBytes, totalSize;
+  uint64_t    totalBytes, headerBytes, totalSize;
   clock_t     stop = 0, start = clock();
   double      gamma;
   
@@ -490,12 +492,14 @@ int32_t main(int argc, char *argv[]){
 
   I = (INF *) Calloc(P->nTar, sizeof(INF));
 
-  totalSize  = 0;
-  totalBytes = 0;
+  totalSize   = 0;
+  totalBytes  = 0;
+  headerBytes = 0;
   for(n = 0 ; n < P->nTar ; ++n){
     Compress(P, refModels, n, refNModels, I);
-    totalSize  += I[n].size;
-    totalBytes += I[n].bytes;
+    totalSize   += I[n].size;
+    totalBytes  += I[n].bytes;
+    headerBytes += I[n].header;
     }
 
   if(P->nTar > 1)
@@ -507,10 +511,12 @@ int32_t main(int argc, char *argv[]){
       (8.0*I[n].bytes)/(2*I[n].size));
       }
 
+
   fprintf(stdout, "Total bytes: %"PRIu64" (", totalBytes);
   PrintHRBytes(totalBytes);
-  fprintf(stdout, "), %.4g bpb, Normalized Dissimilarity Rate: %.6g\n", 
-  ((8.0*totalBytes)/totalSize), (2.0*totalBytes)/totalSize);  
+  fprintf(stdout, "), %.4g bpb, %.4g bps w/ no header, Normalized Dissimilarity" 
+  " Rate: %.6g\n", ((8.0*totalBytes)/totalSize), ((8.0*(totalBytes-headerBytes))
+  /totalSize), (2.0*totalBytes)/totalSize);  
   stop = clock();
   fprintf(stdout, "Spent %g sec.\n", ((double)(stop-start))/CLOCKS_PER_SEC);
 

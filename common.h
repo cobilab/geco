@@ -7,6 +7,7 @@
 typedef struct{
   uint64_t size;
   uint64_t bytes;
+  uint64_t header;
   }
 INF;
 
