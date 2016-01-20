@@ -1,6 +1,5 @@
-# GeCo #
 <p align="center"><img src="/logo.png" 
-alt="GeCo" width="350" height="260" border="0" /></p>
+alt="GeCo" width="300" height="260" border="0" /></p>
 Compress and analyze genomic sequences. As a compression tool, GeCo is able to provide additional compression gains over several top specific tools, while as an analysis tool, GeCo is able to determine absolute measures, namely for many distance computations, and local measures, such as the information content contained in each element, providing a way to quantify and locate specific genomic events. GeCo can afford individual compression and referential compression.
 
 ## INSTALLATION ##
@@ -13,10 +12,9 @@ Download, install and resolve conflicts.
 
 #### Linux 
 <pre>
-sudo apt-get install cmake
-wget https://github.com/pratas/geco/archive/master.zip
-unzip master.zip
-cd geco-master
+sudo apt-get install cmake git
+git clone https://github.com/pratas/geco.git
+cd geco/src/
 cmake .
 make
 </pre>
@@ -26,7 +24,7 @@ Alternatively, you can install (without cmake and only for linux) using
 <pre>
 wget https://github.com/pratas/geco/archive/master.zip
 unzip master.zip
-cd geco-master
+cd geco-master/src/
 mv Makefile.linux Makefile
 make
 </pre>
@@ -43,7 +41,7 @@ brew install wget
 brew install gcc48
 wget https://github.com/pratas/geco/archive/master.zip
 unzip master.zip
-cd geco-master
+cd geco-master/src/
 cmake .
 make
 </pre>
@@ -229,7 +227,7 @@ Level 10: -tm 1:1:0:0/0 -tm 4:1:0:0/0 -tm 6:1:0:0/0 -tm 9:1:0:0/0 -tm 11:1:0:0/0
 
 On using this software/method please cite:
 
-PAPER: Submitted to DCC;
+D. Pratas, A. J. Pinho, P. J. S. G. Ferreira. Efficient compression of genomic sequences. Proc. of the Data Compression Conference, DCC-2016, Snowbird, UT, March 2016. (accepted)
 DOI: to add;
 
 ## ISSUES ##
