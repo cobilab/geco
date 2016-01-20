@@ -228,7 +228,11 @@ Level 10: -tm 1:1:0:0/0 -tm 4:1:0:0/0 -tm 6:1:0:0/0 -tm 9:1:0:0/0 -tm 11:1:0:0/0
 On using this software/method please cite:
 
 D. Pratas, A. J. Pinho, P. J. S. G. Ferreira. Efficient compression of genomic sequences. Proc. of the Data Compression Conference, DCC-2016, Snowbird, UT, March 2016. (accepted)
-DOI: to add;
+
+## NEW FEATURES ##
+
+1. Symbol counters with 4 bits of precision (instead of 2 bits);
+2. Improved hash function;
 
 ## ISSUES ##
 
@@ -236,10 +240,10 @@ For any issue let us know at [issues link](https://github.com/pratas/GeCo/issues
 
 ## LICENSE ##
 
-GPL v2.
+GPL v3.
 
 For more information:
-<pre>http://www.gnu.org/licenses/gpl-2.0.html</pre>
+<pre>http://www.gnu.org/licenses/gpl-3.0.html</pre>
 
                                                     
 
