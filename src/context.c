@@ -84,10 +84,10 @@ static void InsertKey(HashTable *H, U32 hi, U64 idx, U8 s){
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 inline void GetFreqsFromHCC(HCC c, uint32_t a, PModel *P){
-   P->sum  = (P->freqs[0] = a * ( c &  0x0f) + 1);
-   P->sum += (P->freqs[1] = a * ((c & (0x0f<<4))>>4) + 1);
-   P->sum += (P->freqs[2] = a * ((c & (0x0f<<8))>>8) + 1);
-   P->sum += (P->freqs[3] = a * ((c & (0x0f<<12))>>12) + 1);
+   P->sum  = (P->freqs[0] = 1 + a * ( c &  0x0f));
+   P->sum += (P->freqs[1] = 1 + a * ((c & (0x0f<<4))>>4));
+   P->sum += (P->freqs[2] = 1 + a * ((c & (0x0f<<8))>>8));
+   P->sum += (P->freqs[3] = 1 + a * ((c & (0x0f<<12))>>12));
    }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
