@@ -71,7 +71,6 @@ typedef struct{
   U32        mode;
   HashTable  hTable;
   Array      array;
-
   // INDEXES 
   U64        pModelIdx;
   U64        pModelIdxIR;

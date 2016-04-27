@@ -209,6 +209,24 @@ refNModels, INF *I){
       for(n = 0 ; n < totModels ; ++n)
         cModelWeight[n] /= cModelTotalWeight; // RENORMALIZE THE WEIGHTS
 
+/*
+      for(cModel = 0 ; cModel < P->nModels ; ++cModel)
+        if(cModels[cModel]->ctx > 12){
+          cModels[cModel]->alphaDen = 1 + ((int)((cModelWeight[cModel]) * 100));
+          if(cModels[cModel]->edits != 0)
+            cModels[cModel]->SUBS.eDen =  1 + ((int)((cModelWeight[cModel+1]) * 10));
+          }
+*/
+/*
+
+      for(n = 0 ; n < totModels ; ++n){
+        fprintf(stdout, "%2lf\t", cModelWeight[n]);
+        }
+      fprintf(stdout, "\n");
+*/
+
+
+
       n = 0;
       for(cModel = 0 ; cModel < P->nModels ; ++cModel){
         if(cModels[cModel]->edits != 0){
