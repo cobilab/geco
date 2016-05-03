@@ -90,7 +90,6 @@ or
 
 These will print the following options:
 <pre>
-<p>
 Usage: GeCo [OPTION]... -r [FILE]  [FILE]:[...]                        
 Compress and analyze a genomic sequence (by default, compress).        
                                                                        
