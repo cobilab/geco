@@ -80,7 +80,7 @@ U32 garbage;
 #define DEFAULT_VERBOSE        0
 #define DEFAULT_FORCE          0
 #define DEFAULT_LEVEL          5
-#define MAX_LEVEL              14
+#define MAX_LEVEL              15
 #define MIN_LEVEL              1
 #define MAX_CTX                31
 #define MIN_CTX                1

@@ -22,6 +22,7 @@ char *GetLevels(uint8_t l){
     case 12: return LEVEL_12;
     case 13: return LEVEL_13;
     case 14: return LEVEL_14;
+    case 15: return LEVEL_15;
     default: fprintf(stderr, "[x] Unknown level!\n");
     exit(1);
     }
@@ -45,6 +46,7 @@ void PrintLevels(void){
   fprintf(stderr, "Level%s\n", LEVEL_12);
   fprintf(stderr, "Level%s\n", LEVEL_13);
   fprintf(stderr, "Level%s\n", LEVEL_14);
+  fprintf(stderr, "Level%s\n", LEVEL_15);
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
