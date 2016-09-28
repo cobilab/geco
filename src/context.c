@@ -83,7 +83,7 @@ static void InsertKey(HashTable *H, U32 hi, U64 idx, U8 s){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-inline void GetFreqsFromHCC(HCC c, uint32_t a, PModel *P){
+void GetFreqsFromHCC(HCC c, uint32_t a, PModel *P){
    P->sum  = (P->freqs[0] = 1 + a * ( c &  0x0f));
    P->sum += (P->freqs[1] = 1 + a * ((c & (0x0f<<4))>>4));
    P->sum += (P->freqs[2] = 1 + a * ((c & (0x0f<<8))>>8));
@@ -321,20 +321,20 @@ void ResetCModelIdx(CModel *M){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-inline U8 GetPModelIdxIR(U8 *p, CModel *M){
+U8 GetPModelIdxIR(U8 *p, CModel *M){
   M->pModelIdxIR = (M->pModelIdxIR>>2)+GetCompNum(*p)*M->multiplier;
   return GetCompNum(*(p-M->ctx));
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-inline void GetPModelIdx(U8 *p, CModel *M){
+void GetPModelIdx(U8 *p, CModel *M){
   M->pModelIdx = ((M->pModelIdx-*(p-M->ctx)*M->multiplier)<<2)+*p;
   }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-inline uint64_t GetPModelIdxCorr(U8 *p, CModel *M, uint64_t idx){
+uint64_t GetPModelIdxCorr(U8 *p, CModel *M, uint64_t idx){
   return (((idx-*(p-M->ctx)*M->multiplier)<<2)+*p);
   }
 
@@ -494,7 +494,7 @@ void CorrectCModelDELS(CModel *M, PModel *P, uint8_t sym){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-inline void ComputePModel(CModel *M, PModel *P, uint64_t idx, uint32_t aDen){
+void ComputePModel(CModel *M, PModel *P, uint64_t idx, uint32_t aDen){
   ACC *ac;
   switch(M->mode){
     case HASH_TABLE_MODE:
@@ -516,7 +516,7 @@ inline void ComputePModel(CModel *M, PModel *P, uint64_t idx, uint32_t aDen){
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-inline void ComputeWeightedFreqs(double w, PModel *P, FloatPModel *PT){
+void ComputeWeightedFreqs(double w, PModel *P, FloatPModel *PT){
   double f = w / P->sum;
   PT->freqs[0] += (double) P->freqs[0] * f;
   PT->freqs[1] += (double) P->freqs[1] * f;

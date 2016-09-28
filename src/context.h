@@ -104,9 +104,9 @@ void            FailSUBS             (CModel *);
 void            FailADDS             (CModel *);
 void            FailDELS             (CModel *);
 void            FreeCModel           (CModel *);
-inline void     GetPModelIdx         (U8 *, CModel *);
-inline U8       GetPModelIdxIR       (U8 *, CModel *);
-inline uint64_t GetPModelIdxCorr     (U8 *, CModel *, uint64_t);
+void            GetPModelIdx         (U8 *, CModel *);
+U8              GetPModelIdxIR       (U8 *, CModel *);
+uint64_t        GetPModelIdxCorr     (U8 *, CModel *, uint64_t);
 void            CorrectCModelSUBS    (CModel *, PModel *, uint8_t);
 void            CorrectCModelSUBS2    (CModel *, PModel *, uint8_t);
 void            CorrectCModelADDS    (CModel *, PModel *, uint8_t);
@@ -116,8 +116,8 @@ FloatPModel     *CreateFloatPModel   (U32);
 void            ResetCModelIdx       (CModel *);
 void            UpdateCModelCounter  (CModel *, U32, U64);
 CModel          *CreateCModel        (U32, U32, U32, U8, U32, U32, U32);
-inline void     ComputePModel        (CModel *, PModel *, uint64_t, uint32_t);
-inline void     ComputeWeightedFreqs (double, PModel *, FloatPModel *);
+void            ComputePModel        (CModel *, PModel *, uint64_t, uint32_t);
+void            ComputeWeightedFreqs (double, PModel *, FloatPModel *);
 double          PModelSymbolNats     (PModel *, U32);
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
