@@ -80,7 +80,7 @@ void PrintHRBytes(int64_t b){
   int32_t u = 1024, e;
   double s;
   uint8_t t[] = {'K','M','G','T','E','Z','Y'};
-  if(b < u) fprintf(stderr, "%"PRIi64" B", b);
+  if(b < u) fprintf(stdout, "%"PRIi64" B", b);
   else{
   e = log(b)/log(u);
   s = (double)b/pow((double)u, (double)e);
