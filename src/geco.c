@@ -347,7 +347,7 @@ CModel **LoadReference(Parameters *P)
         idx = 0;
         }
       #ifdef PROGRESS
-      CalcProgress(nBases, ++i);
+      if(nBases > 100) CalcProgress(nBases, ++i);
       #endif
       }
  
