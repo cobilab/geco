@@ -120,7 +120,7 @@ refNModels, INF *I){
   while((k = fread(readerBuffer, 1, BUFFER_SIZE, Reader)))
     for(idxPos = 0 ; idxPos < k ; ++idxPos){
       #ifdef PROGRESS
-      CalcProgress(nSymbols, ++i);
+      if(nSymbols > 100) CalcProgress(nSymbols, ++i);
       #endif
 
       sym = readerBuffer[idxPos];
